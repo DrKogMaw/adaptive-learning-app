@@ -1,0 +1,11 @@
+{
+  "batteryVersion": "cognitive-battery-1",
+  "questionnaireVersion": "state-questionnaire-1",
+  "tasks": [
+    {"type": "vigilance", "version": "vigilance-1", "trials": 12},
+    {"type": "digit-backward", "version": "digit-backward-1", "trials": 8},
+    {"type": "flanker", "version": "flanker-1", "trials": 20},
+    {"type": "task-switch", "version": "task-switch-1", "trials": 24}
+  ],
+  "baseline": {"practiceRuns": 1, "referenceRuns": 2}
+}

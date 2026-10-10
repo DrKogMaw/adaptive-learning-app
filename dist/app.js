@@ -2,6 +2,7 @@ import { topics, topicById, validateCurriculum, isEligible, recommend } from './
 import { loadChecks, scoreResponses } from './knowledge.mjs';
 import { loadStudyForms, validateStudyForms, createStudySession, recordPretest, startStudy, finishStudy, recordPosttest, isReviewDue, recordDelayed } from './study.mjs';
 import { mountAccount } from './account.mjs';
+import { mountCognitive } from './cognitive.mjs';
 
 validateCurriculum();
 const bank = await loadChecks();
@@ -11,8 +12,9 @@ validateStudyForms(bank, studyForms);
 const formsByTopic = Object.fromEntries(studyForms.forms.map(form => [form.topicId, form]));
 const apiReady = fetch('/api/health').then(async response => response.ok && (await response.json()).service === 'nextstep-api').catch(() => false);
 const STORAGE_KEY = 'nextstep-milestone-1';
-const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[]};
+const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[],cognitiveSessions:[]};
 let accountController = null;
+let cognitiveController = null;
 let state;
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
@@ -27,6 +29,8 @@ if (!Array.isArray(state.attempts)) state.attempts=[];
 state.attempts=state.attempts.filter(attempt=>checksByTopic[attempt?.topicId] && Number.isInteger(attempt?.correct) && Array.isArray(attempt?.responses));
 if (!Array.isArray(state.studySessions)) state.studySessions=[];
 state.studySessions=state.studySessions.filter(session=>session?.id && formsByTopic[session.topicId] && ['pretest','studying','posttest','awaiting-review','complete'].includes(session.status));
+if (!Array.isArray(state.cognitiveSessions)) state.cognitiveSessions=[];
+state.cognitiveSessions=state.cognitiveSessions.filter(session=>session?.id&&Array.isArray(session.trials)&&session.questionnaire).slice(-50);
 
 const $ = selector => document.querySelector(selector);
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));accountController?.scheduleSync();}
@@ -96,7 +100,7 @@ function renderTopics(){
   $('#topic-grid').innerHTML=shown.length ? shown.map((topic,index)=>{const status=topicStatus(topic),last=latestAttempt(topic.id);return `<button class="topic-card ${status==='locked'?'locked':''}" type="button" data-topic="${topic.id}" aria-label="Open ${escapeHtml(topic.title)}"><div class="topic-top"><span>${escapeHtml(topic.unit.toUpperCase())}</span><span>${String(topics.indexOf(topic)+1).padStart(2,'0')}</span></div><h3>${escapeHtml(topic.title)}</h3><p>${escapeHtml(topic.objective)}</p><div class="topic-bottom"><span>${last?`Check ${last.correct}/${last.total}`:`◷ ${topic.minutes} min`}</span><span class="topic-status ${status}">${statusLabel(status)}</span></div></button>`;}).join('') : '<div class="empty-state">No topics in this view yet. Try another filter.</div>';
   $('#topic-grid').querySelectorAll('[data-topic]').forEach(button=>button.addEventListener('click',()=>openTopic(button.dataset.topic)));
 }
-function render(){renderSummary();renderRecommendation();renderPath();renderStudyPanel();renderTopics();}
+function render(){renderSummary();renderRecommendation();renderPath();renderStudyPanel();renderTopics();cognitiveController?.render();}
 
 function openTopic(id){
   const t=topicById[id];
@@ -208,18 +212,22 @@ $('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes)
 $('#goal-select').addEventListener('change',event=>{state.goal=event.target.value;state.override=null;save();render();});
 $('#time-select').addEventListener('change',event=>{state.minutes=Number(event.target.value);state.override=null;save();render();});
 document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;document.querySelectorAll('.filter').forEach(item=>item.classList.toggle('active',item===button));renderTopics();}));
-$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, and study sessions in this browser and your account?':'Reset your local topic status, quiz attempts, and study sessions?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
+$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, study sessions, and cognitive assessments in this browser and your account?':'Reset your local topic status, quiz attempts, study sessions, and cognitive assessments?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
 $('#topic-dialog').addEventListener('click',event=>{if(event.target.id==='topic-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('click',event=>{if(event.target.id==='quiz-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('close',()=>{if(studyTimer)clearInterval(studyTimer);studyTimer=null;});
 window.addEventListener('focus',renderStudyPanel);
 setInterval(renderStudyPanel,60000);
 render();
+cognitiveController = await mountCognitive({
+  getSessions:()=>state.cognitiveSessions,
+  addSession:session=>{state.cognitiveSessions.push(session);state.cognitiveSessions=state.cognitiveSessions.slice(-50);save();render();}
+});
 if (await apiReady) {
   accountController = mountAccount({
     getState: () => state,
     setState: remote => {
-      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || []};
+      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || [],cognitiveSessions:remote.cognitiveSessions || []};
       $('#goal-select').value=state.goal;
       $('#time-select').value=String(state.minutes);
       save();render();

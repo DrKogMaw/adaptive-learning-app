@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 
-const string consentVersion = "2026-10-10-v1";
-const string consentText = "Next Step stores your account email, topic choices, study session times, question answers, response times, and scores to let you resume your work across devices. The current checks are exploratory and are not a diagnosis or a validated measure of learning gain. You can withdraw consent to stop new study data being saved, export your data, or delete your account and its study data. This prototype does not share your data with other learners. Contact the app operator before using it for a formal participant study.";
+const string consentVersion = "2026-10-11-v2";
+const string consentText = "Next Step stores your account email, topic choices, study session times, question answers, response times, and scores. If you choose to run the optional cognitive assessment, it also stores each task stimulus, response, timing, and your sleepiness, motivation, stress, sleep hours, recent study time, and available study time answers. These measures are exploratory; they are not a diagnosis or a validated measure of learning gain. You can withdraw consent to stop new data being saved, export your progress, or delete your account and its stored data. This prototype does not share your data with other learners. Contact the app operator before using it for a formal participant study.";
 
 var builder = WebApplication.CreateBuilder(args);
 var provider = builder.Configuration["NEXTSTEP_DB_PROVIDER"]?.ToLowerInvariant() ?? "sqlite";
@@ -36,7 +36,11 @@ builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
-    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreatedAsync();
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.EnsureCreatedAsync();
+    await SchemaUpgrade.AddCognitiveTablesAsync(db);
+}
 
 var distPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "dist"));
 var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -44,6 +48,8 @@ var bank = JsonSerializer.Deserialize<QuestionBank>(File.ReadAllText(Path.Combin
     ?? throw new InvalidOperationException("Knowledge check bank is empty.");
 var studyForms = JsonSerializer.Deserialize<StudyFormBank>(File.ReadAllText(Path.Combine(distPath, "study-forms.json")), jsonOptions)
     ?? throw new InvalidOperationException("Study forms are empty.");
+var cognitiveConfig = JsonSerializer.Deserialize<CognitiveConfig>(File.ReadAllText(Path.Combine(distPath, "cognitive-config.json")), jsonOptions)
+    ?? throw new InvalidOperationException("Cognitive task configuration is empty.");
 var checks = bank.Checks.ToDictionary(check => check.TopicId, StringComparer.Ordinal);
 var forms = studyForms.Forms.ToDictionary(form => form.TopicId, StringComparer.Ordinal);
 var topicIds = new HashSet<string>(StringComparer.Ordinal) { "cs.variables", "cs.types", "cs.operators", "cs.conditionals", "cs.loops", "cs.functions", "cs.scope", "cs.arrays", "cs.objects", "cs.strings", "cs.debugging", "cs.recursion", "cs.complexity", "cs.search", "cs.sort", "cs.recursive-trees", "cs.backtracking", "cs.dom", "cs.events", "cs.async" };
@@ -66,7 +72,8 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/health", () => Results.Ok(new { service = "nextstep-api", bankVersion = bank.Version, studyVersion = studyForms.Version, storage = provider }));
+app.MapGet("/api/health", () => Results.Ok(new { service = "nextstep-api", bankVersion = bank.Version, studyVersion = studyForms.Version, cognitiveVersion = cognitiveConfig.BatteryVersion, storage = provider }));
+app.MapGet("/api/cognitive-config", () => Results.Ok(cognitiveConfig));
 app.MapGroup("/api/auth").MapIdentityApi<AppUser>();
 app.MapGet("/api/auth/csrf", (HttpContext context, IAntiforgery antiforgery) =>
 {
@@ -122,13 +129,16 @@ app.MapGet("/api/progress", async (ClaimsPrincipal principal, AppDbContext db) =
     var profile = await db.LearnerProfiles.FindAsync(userId);
     var sessions = (await db.StudySessions.Where(x => x.UserId == userId).ToListAsync()).OrderBy(x => x.StartedAt).ToList();
     var attempts = (await db.AssessmentAttempts.Where(x => x.UserId == userId).Include(x => x.Responses).ToListAsync()).OrderBy(x => x.CompletedAt).ToList();
+    var cognitiveSessions = (await db.CognitiveSessions.Where(x => x.UserId == userId)
+        .Include(x => x.Trials).Include(x => x.Questionnaire).ToListAsync()).OrderBy(x => x.CompletedAt).ToList();
     return Results.Ok(new
     {
         status = profile is null ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(profile.TopicStatusJson)!,
         goal = profile?.Goal ?? "all", minutes = profile?.Minutes ?? 25, @override = profile?.OverrideTopicId,
         studySessions = sessions.Select(x => new { x.Id, x.TopicId, x.PlannedMinutes, x.Status, x.StartedAt, x.StudyStartedAt, x.StudyCompletedAt, x.ActualSeconds, x.DueAt, x.ReviewCompletedAt, x.PriorItemExposure, x.PreAttemptId, x.PostAttemptId, x.DelayedAttemptId }),
         attempts = attempts.Select(x => new { x.Id, x.TopicId, sessionId = x.StudySessionId, x.AssessmentType, x.BankVersion, x.StartedAt, x.CompletedAt, x.Correct, x.Total, x.ScoringSource,
-            responses = x.Responses.OrderBy(r => r.AnsweredAt).Select(r => new { r.ItemId, r.SelectedIndex, r.ResponseTimeMs, r.AnsweredAt }) })
+            responses = x.Responses.OrderBy(r => r.AnsweredAt).Select(r => new { r.ItemId, r.SelectedIndex, r.ResponseTimeMs, r.AnsweredAt }) }),
+        cognitiveSessions = cognitiveSessions.Select(CognitiveStorage.ToBrowserModel)
     });
 }).RequireAuthorization();
 
@@ -189,12 +199,16 @@ app.MapPut("/api/progress", async (ProgressUpload upload, ClaimsPrincipal princi
         (s.DelayedAttemptId is not null && !Matches(s.DelayedAttemptId, s.Id, "delayed"))))
         return Results.BadRequest(new { error = "Study session attempt links do not match." });
     bool Matches(Guid? attemptId, Guid sessionId, string type) => attemptRows.Any(a => a.Id == attemptId && a.StudySessionId == sessionId && a.AssessmentType == type);
+    if (!CognitiveStorage.TryBuildRows(upload.CognitiveSessions ?? [], cognitiveConfig, userId, ValidDate, out var cognitiveRows, out var cognitiveError))
+        return Results.BadRequest(new { error = cognitiveError });
 
     await using var transaction = await db.Database.BeginTransactionAsync();
+    await db.CognitiveSessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.AssessmentAttempts.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.StudySessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     db.StudySessions.AddRange(sessionRows);
     db.AssessmentAttempts.AddRange(attemptRows);
+    db.CognitiveSessions.AddRange(cognitiveRows);
     var profile = await db.LearnerProfiles.FindAsync(userId);
     if (profile is null) { profile = new LearnerProfile { UserId = userId }; db.LearnerProfiles.Add(profile); }
     profile.Goal = upload.Goal;
@@ -203,7 +217,7 @@ app.MapPut("/api/progress", async (ProgressUpload upload, ClaimsPrincipal princi
     profile.TopicStatusJson = JsonSerializer.Serialize(upload.Status);
     await db.SaveChangesAsync();
     await transaction.CommitAsync();
-    return Results.Ok(new { saved = true, studySessions = sessionRows.Count, attempts = attemptRows.Count, responses = attemptRows.Sum(x => x.Responses.Count) });
+    return Results.Ok(new { saved = true, studySessions = sessionRows.Count, attempts = attemptRows.Count, responses = attemptRows.Sum(x => x.Responses.Count), cognitiveSessions = cognitiveRows.Count, cognitiveTrials = cognitiveRows.Sum(x => x.Trials.Count) });
 }).RequireAuthorization();
 
 app.MapDelete("/api/account", async (ClaimsPrincipal principal, HttpContext context, IAntiforgery antiforgery, AppDbContext db) =>
@@ -211,6 +225,7 @@ app.MapDelete("/api/account", async (ClaimsPrincipal principal, HttpContext cont
     if (!await HasValidCsrf(context, antiforgery)) return Results.BadRequest(new { error = "Invalid CSRF token." });
     var userId = CurrentUserId(principal);
     await using var transaction = await db.Database.BeginTransactionAsync();
+    await db.CognitiveSessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.AssessmentAttempts.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.StudySessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.LearnerProfiles.Where(x => x.UserId == userId).ExecuteDeleteAsync();
@@ -283,7 +298,7 @@ record QuizSubmission(string BankVersion, List<QuizAnswer>? Responses);
 record QuizAnswer(string ItemId, int SelectedIndex, int ResponseTimeMs, DateTimeOffset AnsweredAt);
 record ConsentSubmission(string Version, bool Accepted);
 record ProgressUpload(Dictionary<string, string>? Status, string Goal, int Minutes, string? Override,
-    List<AttemptUpload>? Attempts, List<SessionUpload>? StudySessions);
+    List<AttemptUpload>? Attempts, List<SessionUpload>? StudySessions, List<CognitiveSessionUpload>? CognitiveSessions);
 record AttemptUpload(Guid Id, string TopicId, Guid? SessionId, string AssessmentType, string BankVersion,
     DateTimeOffset StartedAt, DateTimeOffset CompletedAt, List<QuizAnswer>? Responses);
 record SessionUpload(Guid Id, string TopicId, int PlannedMinutes, string Status, DateTimeOffset StartedAt,

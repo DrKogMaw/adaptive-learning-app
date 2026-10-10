@@ -14,6 +14,7 @@
       <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><span>next<span class="brand-accent">step</span><small>LEARNING LAB</small></span></div>
       <nav class="side-nav" aria-label="Sections">
         <a href="#dashboard" class="nav-link active"><span aria-hidden="true">◫</span> Overview</a>
+        <a href="#cognitive" class="nav-link"><span aria-hidden="true">◉</span> Assessment</a>
         <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
         <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
       </nav>
@@ -33,6 +34,8 @@
 
         <section id="account-section" class="account-section" hidden aria-label="Account and data"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ACCOUNT</p><h2>Keep your study record</h2><p class="muted">The local .NET app can save your progress to its database. Choose when to copy data between this browser and your account.</p></div></div><div id="account-panel"></div></section>
 
+        <section id="cognitive" class="cognitive-section" aria-label="Cognitive assessment"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ASSESSMENT</p><h2>Check in before studying</h2><p class="muted">Four short behavioral tasks and a state questionnaire. Your first run is practice; later runs form a preliminary personal reference.</p></div><span class="beta-pill">BATTERY V1</span></div><div id="cognitive-panel"></div></section>
+
         <section class="workspace-grid" aria-label="Study planner">
           <div class="planner-card">
             <div class="section-heading"><div><p class="eyebrow">YOUR STUDY PLAN</p><h2>A good place to begin</h2></div><span class="beta-pill">BASELINE MODEL</span></div>
@@ -46,13 +49,14 @@
 
         <section id="curriculum" class="curriculum-section"><div class="section-heading"><div><p class="eyebrow">CURRICULUM MAP</p><h2>Programming, step by step</h2><p class="muted">Choose a topic to see its objective and activity. Mark your current comfort level to shape the plan.</p></div><div class="filter-row" role="group" aria-label="Filter topics"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="ready" type="button">Ready</button><button class="filter" data-filter="locked" type="button">Later</button></div></div><div id="topic-grid" class="topic-grid"></div></section>
 
-        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Topics become available once their prerequisite topics are marked confident.</p></div><div><span class="method-number">02</span><h3>Measure across time</h3><p>Alternate questions check understanding before study, immediately after, and again the next day.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Recommendations consider your goal and available time. Short check results remain separate from your self reported status.</p></div></div><p class="research-note">Research note: these questions are not calibrated, and this version does not measure cognitive state or predict learning gain.</p></section>
+        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Topics become available once their prerequisite topics are marked confident.</p></div><div><span class="method-number">02</span><h3>Measure across time</h3><p>Alternate questions check understanding before study, immediately after, and again the next day.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Recommendations consider your goal and available time. Cognitive task results remain separate from topic recommendations.</p></div></div><p class="research-note">Research note: the questions and cognitive tasks are not calibrated, and this version does not predict learning gain or diagnose cognitive traits.</p></section>
         <footer><span>Next Step · Research prototype</span><button id="reset-button" type="button">Reset my local progress</button></footer>
       </div>
     </main>
   </div>
   <dialog id="topic-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
   <dialog id="quiz-dialog" aria-labelledby="quiz-title"><div id="quiz-content"></div></dialog>
+  <dialog id="cognitive-dialog" aria-labelledby="cognitive-title"><div id="cognitive-content"></div></dialog>
   <script type="module" src="app.js"></script>
 </body>
 </html>

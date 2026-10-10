@@ -71,6 +71,45 @@ public sealed class ItemResponseRow
     public DateTimeOffset AnsweredAt { get; set; }
 }
 
+public sealed class CognitiveSessionRow
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string BatteryVersion { get; set; } = "";
+    public long Seed { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset CompletedAt { get; set; }
+    public int InterruptionCount { get; set; }
+    public string DeviceInfoJson { get; set; } = "{}";
+    public List<CognitiveTrialRow> Trials { get; set; } = [];
+    public StateQuestionnaireRow? Questionnaire { get; set; }
+}
+
+public sealed class CognitiveTrialRow
+{
+    public Guid Id { get; set; }
+    public Guid CognitiveSessionId { get; set; }
+    public string TaskType { get; set; } = "";
+    public string TaskVersion { get; set; } = "";
+    public int TrialIndex { get; set; }
+    public string Condition { get; set; } = "";
+    public string StimulusJson { get; set; } = "{}";
+    public string ResponseJson { get; set; } = "{}";
+    public bool IsCorrect { get; set; }
+    public int? ResponseTimeMs { get; set; }
+    public DateTimeOffset PresentedAt { get; set; }
+    public DateTimeOffset? RespondedAt { get; set; }
+}
+
+public sealed class StateQuestionnaireRow
+{
+    public Guid Id { get; set; }
+    public Guid CognitiveSessionId { get; set; }
+    public string Version { get; set; } = "";
+    public string ResponsesJson { get; set; } = "{}";
+    public DateTimeOffset CompletedAt { get; set; }
+}
+
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<ConsentRecord> Consents => Set<ConsentRecord>();
@@ -78,6 +117,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     public DbSet<StudySessionRow> StudySessions => Set<StudySessionRow>();
     public DbSet<AssessmentAttemptRow> AssessmentAttempts => Set<AssessmentAttemptRow>();
     public DbSet<ItemResponseRow> ItemResponses => Set<ItemResponseRow>();
+    public DbSet<CognitiveSessionRow> CognitiveSessions => Set<CognitiveSessionRow>();
+    public DbSet<CognitiveTrialRow> CognitiveTrials => Set<CognitiveTrialRow>();
+    public DbSet<StateQuestionnaireRow> StateQuestionnaires => Set<StateQuestionnaireRow>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -93,5 +135,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         model.Entity<AssessmentAttemptRow>().HasOne<StudySessionRow>().WithMany().HasForeignKey(x => x.StudySessionId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<AssessmentAttemptRow>().HasMany(x => x.Responses).WithOne().HasForeignKey(x => x.AttemptId).OnDelete(DeleteBehavior.Cascade);
         model.Entity<ItemResponseRow>().HasIndex(x => new { x.AttemptId, x.ItemId }).IsUnique();
+        model.Entity<CognitiveSessionRow>().HasIndex(x => new { x.UserId, x.CompletedAt });
+        model.Entity<CognitiveSessionRow>().Property(x => x.BatteryVersion).HasMaxLength(40);
+        model.Entity<CognitiveSessionRow>().HasMany(x => x.Trials).WithOne().HasForeignKey(x => x.CognitiveSessionId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<CognitiveSessionRow>().HasOne(x => x.Questionnaire).WithOne().HasForeignKey<StateQuestionnaireRow>(x => x.CognitiveSessionId).OnDelete(DeleteBehavior.Cascade);
+        model.Entity<CognitiveTrialRow>().HasIndex(x => new { x.CognitiveSessionId, x.TaskType, x.TrialIndex }).IsUnique();
+        model.Entity<CognitiveTrialRow>().Property(x => x.TaskType).HasMaxLength(40);
+        model.Entity<CognitiveTrialRow>().Property(x => x.TaskVersion).HasMaxLength(40);
+        model.Entity<CognitiveTrialRow>().Property(x => x.Condition).HasMaxLength(40);
+        model.Entity<StateQuestionnaireRow>().Property(x => x.Version).HasMaxLength(40);
     }
 }
