@@ -1,3 +1,6 @@
 api/bin/
 api/obj/
+api/*.db
+api/*.db-shm
+api/*.db-wal
 .vs/

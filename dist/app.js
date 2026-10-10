@@ -1,6 +1,7 @@
 import { topics, topicById, validateCurriculum, isEligible, recommend } from './curriculum.mjs';
 import { loadChecks, scoreResponses } from './knowledge.mjs';
 import { loadStudyForms, validateStudyForms, createStudySession, recordPretest, startStudy, finishStudy, recordPosttest, isReviewDue, recordDelayed } from './study.mjs';
+import { mountAccount } from './account.mjs';
 
 validateCurriculum();
 const bank = await loadChecks();
@@ -11,6 +12,7 @@ const formsByTopic = Object.fromEntries(studyForms.forms.map(form => [form.topic
 const apiReady = fetch('/api/health').then(async response => response.ok && (await response.json()).service === 'nextstep-api').catch(() => false);
 const STORAGE_KEY = 'nextstep-milestone-1';
 const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[]};
+let accountController = null;
 let state;
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
@@ -27,7 +29,7 @@ if (!Array.isArray(state.studySessions)) state.studySessions=[];
 state.studySessions=state.studySessions.filter(session=>session?.id && formsByTopic[session.topicId] && ['pretest','studying','posttest','awaiting-review','complete'].includes(session.status));
 
 const $ = selector => document.querySelector(selector);
-function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));accountController?.scheduleSync();}
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
 function latestAttempt(topicId){return [...state.attempts].reverse().find(attempt=>attempt.topicId===topicId);}
 function formatDate(value){return new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));}
@@ -206,10 +208,21 @@ $('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes)
 $('#goal-select').addEventListener('change',event=>{state.goal=event.target.value;state.override=null;save();render();});
 $('#time-select').addEventListener('change',event=>{state.minutes=Number(event.target.value);state.override=null;save();render();});
 document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;document.querySelectorAll('.filter').forEach(item=>item.classList.toggle('active',item===button));renderTopics();}));
-$('#reset-button').addEventListener('click',()=>{if(confirm('Reset your local topic status, quiz attempts, and study sessions?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
+$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, and study sessions in this browser and your account?':'Reset your local topic status, quiz attempts, and study sessions?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
 $('#topic-dialog').addEventListener('click',event=>{if(event.target.id==='topic-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('click',event=>{if(event.target.id==='quiz-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('close',()=>{if(studyTimer)clearInterval(studyTimer);studyTimer=null;});
 window.addEventListener('focus',renderStudyPanel);
 setInterval(renderStudyPanel,60000);
 render();
+if (await apiReady) {
+  accountController = mountAccount({
+    getState: () => state,
+    setState: remote => {
+      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || []};
+      $('#goal-select').value=state.goal;
+      $('#time-select').value=String(state.minutes);
+      save();render();
+    }
+  });
+}

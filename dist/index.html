@@ -17,7 +17,7 @@
         <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
         <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
       </nav>
-      <div class="sidebar-note"><span class="status-dot"></span> Prototype · Milestone 3<br><small>Your progress stays in this browser.</small></div>
+      <div class="sidebar-note"><span class="status-dot"></span> Prototype · <span id="milestone-label">Browser preview</span><br><small id="storage-label">Your progress stays in this browser.</small></div>
     </aside>
 
     <main id="dashboard" class="main-content">
@@ -30,6 +30,8 @@
           <div class="summary-card"><span class="summary-icon orange">⌁</span><div><strong id="ready-count">0</strong><span>ready to explore</span></div></div>
           <div class="summary-card"><span class="summary-icon green">◎</span><div><strong id="path-label">Foundations</strong><span>current learning path</span></div></div>
         </section>
+
+        <section id="account-section" class="account-section" hidden aria-label="Account and data"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ACCOUNT</p><h2>Keep your study record</h2><p class="muted">The local .NET app can save your progress to its database. Choose when to copy data between this browser and your account.</p></div></div><div id="account-panel"></div></section>
 
         <section class="workspace-grid" aria-label="Study planner">
           <div class="planner-card">
