@@ -7,16 +7,16 @@ This is a runnable curriculum and recommendation prototype for introductory Java
 - A graph of 20 learning objectives, each with an activity, duration, and prerequisites.
 - Prerequisite validation and a transparent baseline recommendation that uses topic status, goal, and available time.
 - Learner control: mark topics as new, practicing, or confident; override the suggested topic; reset local progress.
-- Four question knowledge checks for the six foundation topics. Results include item level answers and response times. The local .NET API serves answer free items and scores submitted attempts.
+- A study cycle for each of the six foundation topics: four item precheck, recorded study interval, four different immediate items, and four different delayed items due after 24 hours.
+- Results include item level answers and response times. The local .NET API serves answer free forms and scores submitted attempts. Sessions can resume after a browser reload.
 - No cognitive diagnosis or measured mastery is claimed. Learner status is self reported and is labeled as such.
 
 ## Next milestones
 
-1. Add alternate item forms, pretests, posttests, and delayed retention. Replace self reported status with an uncertainty aware knowledge estimate only after the items have been evaluated.
+1. Implement consent, accounts, and PostgreSQL persistence using `schema.sql` as the starting model. The current .NET endpoint is stateless; the browser keeps sessions and attempts locally.
 2. Add four short browser cognitive tasks, a state questionnaire, trial timing, versioning, and practice baselines.
-3. Implement consent, accounts, and PostgreSQL persistence using `schema.sql` as the starting model. The current .NET endpoint is stateless; the browser keeps attempts locally.
-4. Add study sessions, then evaluate the baseline policy before introducing state aware recommendations.
+3. Evaluate the item forms and baseline recommendation policy before introducing state aware recommendations or an uncertainty aware mastery estimate.
 
 ## Data note
 
-This prototype stores attempts only on the current device. The hosted static preview includes its answer key in a browser asset; it is suitable for product review, not secure assessment. It should not be used for a study or participant data until consent, authentication, server persistence, privacy controls, alternate items, and assessment instrumentation are implemented.
+This prototype stores attempts and study sessions only on the current device. Delayed reviews appear when the app is opened after the due time; there are no notifications. The study clock records elapsed wall time, including interruptions, and learners may finish before the target duration. The hosted static preview includes answer keys in browser assets, and the items are not calibrated, so raw pre/post differences are not a validated learning gain. Use this for product review rather than a participant study until consent, authentication, server persistence, privacy controls, and measurement quality work are complete.

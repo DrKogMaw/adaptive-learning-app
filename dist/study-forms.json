@@ -1,0 +1,71 @@
+{
+  "version":"javascript-study-v1",
+  "forms":[
+    {"topicId":"cs.variables","post":[
+      {"id":"var-p1","prompt":"What does this print?","code":"let total = 10;\ntotal -= 4;\nconsole.log(total);","options":["4","6","10","14"],"correctIndex":1,"explanation":"Subtracting 4 from 10 leaves 6."},
+      {"id":"var-p2","prompt":"What does this print?","code":"let greeting = 'Hi';\ngreeting = 'Hello';\nconsole.log(greeting);","options":["Hi","Hello","greeting","undefined"],"correctIndex":1,"explanation":"The second assignment replaces the first string."},
+      {"id":"var-p3","prompt":"Which line changes an existing let variable?","options":["let points;","points = 9;","const points = 9;","console.log(points);"],"correctIndex":1,"explanation":"Assignment updates an already declared variable."},
+      {"id":"var-p4","prompt":"What does this print?","code":"let count = 1;\ncount++;\nconsole.log(count);","options":["0","1","2","undefined"],"correctIndex":2,"explanation":"The increment operator adds one to count."}
+    ],"delayed":[
+      {"id":"var-d1","prompt":"What does this print?","code":"let price = 9;\nprice = price * 2;\nconsole.log(price);","options":["9","11","18","92"],"correctIndex":2,"explanation":"The new value is 9 multiplied by 2."},
+      {"id":"var-d2","prompt":"Which declaration cannot be reassigned?","options":["let size = 3","const size = 3","Both","Neither"],"correctIndex":1,"explanation":"A const binding cannot be assigned another value."},
+      {"id":"var-d3","prompt":"What does this print?","code":"let left = 4;\nlet right = left + 1;\nleft = 8;\nconsole.log(right);","options":["4","5","8","9"],"correctIndex":1,"explanation":"right stored 5 before left changed."},
+      {"id":"var-d4","prompt":"Which is a valid JavaScript variable name?","options":["2score","userName","first-name","let"],"correctIndex":1,"explanation":"userName starts with a letter and contains no reserved keyword or hyphen."}
+    ]},
+    {"topicId":"cs.types","post":[
+      {"id":"type-p1","prompt":"What is typeof false?","options":["'false'","'boolean'","'string'","'number'"],"correctIndex":1,"explanation":"false is a boolean value."},
+      {"id":"type-p2","prompt":"What does String(7) produce?","options":["7 as a number","'7' as a string","true","undefined"],"correctIndex":1,"explanation":"String converts the number into text."},
+      {"id":"type-p3","prompt":"Which value is a number?","options":["'3.5'","true","3.5","'true'"],"correctIndex":2,"explanation":"3.5 without quotes is numeric."},
+      {"id":"type-p4","prompt":"What does Number('12') produce?","options":["12 as a number","'12' as a string","false","undefined"],"correctIndex":0,"explanation":"Number converts a numeric string to a number."}
+    ],"delayed":[
+      {"id":"type-d1","prompt":"What is typeof 0?","options":["'zero'","'number'","'boolean'","'string'"],"correctIndex":1,"explanation":"Zero is still a number in JavaScript."},
+      {"id":"type-d2","prompt":"What is typeof 'true'?","options":["'boolean'","'string'","'object'","'number'"],"correctIndex":1,"explanation":"The quotes make this text, not a boolean."},
+      {"id":"type-d3","prompt":"What does Boolean(0) produce?","options":["true","false","0","'false'"],"correctIndex":1,"explanation":"Zero converts to the boolean false."},
+      {"id":"type-d4","prompt":"Which pair contains two values of the same type?","options":["4 and '4'","true and 'true'","4 and 4.5","false and 0"],"correctIndex":2,"explanation":"Both 4 and 4.5 are JavaScript numbers."}
+    ]},
+    {"topicId":"cs.operators","post":[
+      {"id":"op-p1","prompt":"What is (2 + 3) * 4?","options":["14","20","24","9"],"correctIndex":1,"explanation":"Parentheses make 2 + 3 happen first; 5 * 4 is 20."},
+      {"id":"op-p2","prompt":"What is 8 % 3?","options":["1","2","3","5"],"correctIndex":1,"explanation":"8 divided by 3 leaves a remainder of 2."},
+      {"id":"op-p3","prompt":"What is 4 !== '4'?","options":["true","false","4","undefined"],"correctIndex":0,"explanation":"Strict inequality is true because a number differs from a string."},
+      {"id":"op-p4","prompt":"What is 3 ** 2?","options":["5","6","9","32"],"correctIndex":2,"explanation":"3 squared equals 9."}
+    ],"delayed":[
+      {"id":"op-d1","prompt":"What is 1 + 2 * 5?","options":["15","11","20","8"],"correctIndex":1,"explanation":"Multiply 2 by 5 before adding 1."},
+      {"id":"op-d2","prompt":"What is 12 % 5?","options":["1","2","2.4","5"],"correctIndex":1,"explanation":"The remainder after dividing 12 by 5 is 2."},
+      {"id":"op-d3","prompt":"What is 6 >= 6?","options":["true","false","6","undefined"],"correctIndex":0,"explanation":"Greater than or equal includes equality."},
+      {"id":"op-d4","prompt":"What is 2 ** 4?","options":["6","8","12","16"],"correctIndex":3,"explanation":"2 to the fourth power is 16."}
+    ]},
+    {"topicId":"cs.conditionals","post":[
+      {"id":"cond-p1","prompt":"What does this print?","code":"let temperature = 12;\nif (temperature < 10) console.log('cold');\nelse console.log('mild');","options":["cold","mild","12","Nothing"],"correctIndex":1,"explanation":"12 is not less than 10, so the else branch runs."},
+      {"id":"cond-p2","prompt":"When does A && B evaluate to true?","options":["Only A is true","Only B is true","Both are true","Either is true"],"correctIndex":2,"explanation":"Logical AND requires both sides to be true."},
+      {"id":"cond-p3","prompt":"What does this print?","code":"let n = 7;\nif (n % 2 === 0) console.log('even');\nelse console.log('odd');","options":["even","odd","7","Nothing"],"correctIndex":1,"explanation":"7 has remainder 1 when divided by 2."},
+      {"id":"cond-p4","prompt":"Which branch runs?","code":"let x = 3;\nif (x > 5) console.log('A');\nelse if (x > 1) console.log('B');\nelse console.log('C');","options":["A","B","C","None"],"correctIndex":1,"explanation":"3 is not above 5 but is above 1."}
+    ],"delayed":[
+      {"id":"cond-d1","prompt":"What does this print?","code":"let score = 80;\nif (score >= 60) console.log('pass');\nelse console.log('retry');","options":["pass","retry","80","Nothing"],"correctIndex":0,"explanation":"80 meets the threshold of 60."},
+      {"id":"cond-d2","prompt":"When does A || B evaluate to true?","options":["Only when both are true","When at least one is true","Only when both are false","Never"],"correctIndex":1,"explanation":"Logical OR is true if either side is true."},
+      {"id":"cond-d3","prompt":"What does this print?","code":"let value = 0;\nif (value) console.log('yes');\nelse console.log('no');","options":["yes","no","0","Nothing"],"correctIndex":1,"explanation":"Zero is falsy, so the else branch runs."},
+      {"id":"cond-d4","prompt":"What does this print?","code":"let x = 4;\nif (x < 0) console.log('negative');\nelse if (x === 0) console.log('zero');\nelse console.log('positive');","options":["negative","zero","positive","Nothing"],"correctIndex":2,"explanation":"4 is greater than zero, so the final branch runs."}
+    ]},
+    {"topicId":"cs.loops","post":[
+      {"id":"loop-p1","prompt":"How many times does this loop run?","code":"for (let i = 1; i <= 4; i++) console.log(i);","options":["3","4","5","Forever"],"correctIndex":1,"explanation":"It runs for i = 1, 2, 3, and 4."},
+      {"id":"loop-p2","prompt":"What does this print?","code":"let total = 0;\nfor (let i = 0; i < 3; i++) total += 2;\nconsole.log(total);","options":["2","3","5","6"],"correctIndex":3,"explanation":"Three iterations each add 2."},
+      {"id":"loop-p3","prompt":"What does continue do in a loop?","options":["Stops the loop","Skips to the next iteration","Restarts the program","Returns from a function"],"correctIndex":1,"explanation":"continue skips the rest of the current iteration."},
+      {"id":"loop-p4","prompt":"What does this print?","code":"let n = 2;\nwhile (n < 5) n++;\nconsole.log(n);","options":["2","4","5","6"],"correctIndex":2,"explanation":"The loop stops once n reaches 5."}
+    ],"delayed":[
+      {"id":"loop-d1","prompt":"What does this print?","code":"for (let i = 2; i < 5; i++) console.log(i);","options":["2, 3, 4","2, 3, 4, 5","3, 4, 5","5"],"correctIndex":0,"explanation":"The condition excludes 5."},
+      {"id":"loop-d2","prompt":"What is the final value of sum?","code":"let sum = 0;\nfor (let i = 1; i <= 4; i++) sum += i;","options":["4","6","10","16"],"correctIndex":2,"explanation":"The loop adds 1 + 2 + 3 + 4."},
+      {"id":"loop-d3","prompt":"What does break do?","options":["Skips one iteration","Exits the loop","Runs the loop again","Changes the condition"],"correctIndex":1,"explanation":"break exits the nearest enclosing loop."},
+      {"id":"loop-d4","prompt":"How many times does this loop run?","code":"let x = 3;\nwhile (x > 1) x--;","options":["1","2","3","Forever"],"correctIndex":1,"explanation":"It runs at x = 3 and x = 2, then stops at 1."}
+    ]},
+    {"topicId":"cs.functions","post":[
+      {"id":"fn-p1","prompt":"What does this print?","code":"function double(n) { return n * 2; }\nconsole.log(double(4));","options":["2","4","8","undefined"],"correctIndex":2,"explanation":"double returns 4 multiplied by 2."},
+      {"id":"fn-p2","prompt":"What is a parameter?","options":["A named input in a function definition","The value printed by console.log","The function name","A loop counter"],"correctIndex":0,"explanation":"A parameter names an input that receives an argument when called."},
+      {"id":"fn-p3","prompt":"What does this print?","code":"function subtract(a, b) { return a - b; }\nconsole.log(subtract(9, 4));","options":["4","5","9","13"],"correctIndex":1,"explanation":"The function returns 9 minus 4."},
+      {"id":"fn-p4","prompt":"What happens after return runs inside a function?","options":["The function starts over","The function finishes and gives back a value","The whole program stops","A loop always begins"],"correctIndex":1,"explanation":"return ends that function call and supplies its result."}
+    ],"delayed":[
+      {"id":"fn-d1","prompt":"What does this print?","code":"function triple(x) { return x * 3; }\nconsole.log(triple(5));","options":["3","5","8","15"],"correctIndex":3,"explanation":"triple returns 5 multiplied by 3."},
+      {"id":"fn-d2","prompt":"Which values are arguments in this call?","code":"function join(a, b) { return a + b; }\njoin('a', 'b');","options":["a and b parameter names","'a' and 'b' values","join","'ab'"],"correctIndex":1,"explanation":"The two string values are passed as arguments."},
+      {"id":"fn-d3","prompt":"What does this print?","code":"function square(n) { return n * n; }\nconsole.log(square(3));","options":["3","6","9","undefined"],"correctIndex":2,"explanation":"square returns 3 multiplied by itself."},
+      {"id":"fn-d4","prompt":"What value does a function return if it has no return statement?","options":["null","false","0","undefined"],"correctIndex":3,"explanation":"JavaScript returns undefined when no value is explicitly returned."}
+    ]}
+  ]
+}
