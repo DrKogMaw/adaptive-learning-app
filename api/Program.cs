@@ -235,7 +235,7 @@ app.MapPost("/api/knowledge-checks/{topicId}/{form}/submit", (string topicId, st
     return form switch { "post" => (studyForm.Post, studyForms.Version), "delayed" => (studyForm.Delayed, studyForms.Version), _ => (null, null) };
 }
 bool KnownTopic(string id) => topicIds.Contains(id);
-bool ValidDate(DateTimeOffset date) => date > new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero) && date < DateTimeOffset.UtcNow.AddDays(2);
+bool ValidDate(DateTimeOffset date) => date.Offset == TimeSpan.Zero && date > new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero) && date < DateTimeOffset.UtcNow.AddDays(2);
 bool OptionalDate(DateTimeOffset? date) => date is null || ValidDate(date.Value);
 bool ValidResponses(List<KnowledgeItem> items, List<QuizAnswer>? responses)
 {
