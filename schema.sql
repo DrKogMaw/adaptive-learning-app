@@ -41,7 +41,7 @@ CREATE TABLE study_activities (
   version text NOT NULL
 );
 CREATE TABLE assessment_items (
-  id uuid PRIMARY KEY,
+  id text PRIMARY KEY,
   objective_id text NOT NULL REFERENCES learning_objectives(id),
   item_version text NOT NULL,
   difficulty numeric(5,3),
@@ -109,7 +109,7 @@ CREATE TABLE knowledge_assessments (
 CREATE TABLE knowledge_responses (
   id uuid PRIMARY KEY,
   assessment_id uuid NOT NULL REFERENCES knowledge_assessments(id),
-  item_id uuid NOT NULL REFERENCES assessment_items(id),
+  item_id text NOT NULL REFERENCES assessment_items(id),
   response jsonb NOT NULL,
   is_correct boolean,
   response_time_ms integer CHECK (response_time_ms >= 0),

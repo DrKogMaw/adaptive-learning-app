@@ -17,11 +17,11 @@
         <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
         <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
       </nav>
-      <div class="sidebar-note"><span class="status-dot"></span> Prototype · Milestone 1<br><small>Your progress stays in this browser.</small></div>
+      <div class="sidebar-note"><span class="status-dot"></span> Prototype · Milestone 2<br><small>Your progress stays in this browser.</small></div>
     </aside>
 
     <main id="dashboard" class="main-content">
-      <header class="topbar"><span class="eyebrow">PROGRAMMING FUNDAMENTALS</span><span class="topbar-right">Personal learning workspace <span class="avatar">N</span></span></header>
+      <header class="topbar"><span class="eyebrow">JAVASCRIPT FOUNDATIONS</span><span class="topbar-right">Personal learning workspace <span class="avatar">N</span></span></header>
       <div class="content-wrap">
         <section class="intro"><div><p class="eyebrow">GOOD TO SEE YOU</p><h1>Find your next <em>step.</em></h1><p class="lead">A focused path through programming concepts, one learning objective at a time.</p></div><div class="intro-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit-center">✳</div></div></section>
 
@@ -42,12 +42,13 @@
 
         <section id="curriculum" class="curriculum-section"><div class="section-heading"><div><p class="eyebrow">CURRICULUM MAP</p><h2>Programming, step by step</h2><p class="muted">Choose a topic to see its objective and activity. Mark your current comfort level to shape the plan.</p></div><div class="filter-row" role="group" aria-label="Filter topics"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="ready" type="button">Ready</button><button class="filter" data-filter="locked" type="button">Later</button></div></div><div id="topic-grid" class="topic-grid"></div></section>
 
-        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Topics become available once their prerequisite topics are marked confident.</p></div><div><span class="method-number">02</span><h3>Match your session</h3><p>The planner considers your learning goal and available minutes, then prioritizes topics you have not started.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Recommendations are suggestions. Open any topic, choose your own next step, and adjust your self reported status.</p></div></div><p class="research-note">Research note: this version is a conventional study planner. It does not measure cognitive state or predict learning gain yet.</p></section>
+        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Topics become available once their prerequisite topics are marked confident.</p></div><div><span class="method-number">02</span><h3>Check understanding</h3><p>Short JavaScript checks record your answers and show explanations. Results are early evidence, not a mastery score.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Recommendations consider your goal and available time. Open any topic and adjust your self reported status.</p></div></div><p class="research-note">Research note: this version is a conventional study planner. It does not measure cognitive state or predict learning gain yet.</p></section>
         <footer><span>Next Step · Research prototype</span><button id="reset-button" type="button">Reset my local progress</button></footer>
       </div>
     </main>
   </div>
   <dialog id="topic-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  <dialog id="quiz-dialog" aria-labelledby="quiz-title"><div id="quiz-content"></div></dialog>
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,41 @@
+{
+  "version": "javascript-foundations-v1",
+  "checks": [
+    {"topicId":"cs.variables","items":[
+      {"id":"var-01","prompt":"What does this print?","code":"let score = 2;\nscore = score + 3;\nconsole.log(score);","options":["2","3","5","23"],"correctIndex":2,"explanation":"The assignment replaces 2 with the result of 2 + 3."},
+      {"id":"var-02","prompt":"Which declaration allows its variable to be assigned a new value later?","options":["const count = 1","let count = 1","Both","Neither"],"correctIndex":1,"explanation":"A let binding can be reassigned; a const binding cannot."},
+      {"id":"var-03","prompt":"What does this print?","code":"let city = 'Paris';\nconsole.log(city);","options":["city","Paris","'city'","undefined"],"correctIndex":1,"explanation":"The variable city stores the string Paris."},
+      {"id":"var-04","prompt":"What does this print?","code":"let first = 2;\nlet second = first;\nfirst = 7;\nconsole.log(second);","options":["2","7","first","undefined"],"correctIndex":0,"explanation":"second received the number 2; changing first does not change that stored number."}
+    ]},
+    {"topicId":"cs.types","items":[
+      {"id":"type-01","prompt":"What is the result of typeof '42'?","options":["'number'","'string'","'boolean'","'object'"],"correctIndex":1,"explanation":"Quotes make 42 a string value."},
+      {"id":"type-02","prompt":"Which value is a boolean?","options":["'false'","0","false","'0'"],"correctIndex":2,"explanation":"false without quotes is a boolean; quoted values are strings."},
+      {"id":"type-03","prompt":"What is the result of typeof 42?","options":["'integer'","'string'","'number'","'value'"],"correctIndex":2,"explanation":"JavaScript uses the number type for this numeric value."},
+      {"id":"type-04","prompt":"What does Number('8') produce?","options":["The string '8'","The number 8","The boolean true","undefined"],"correctIndex":1,"explanation":"Number converts a numeric string into a number."}
+    ]},
+    {"topicId":"cs.operators","items":[
+      {"id":"op-01","prompt":"What is 2 + 3 * 4?","options":["20","14","24","9"],"correctIndex":1,"explanation":"Multiplication happens before addition: 2 + 12 = 14."},
+      {"id":"op-02","prompt":"What is 5 === '5'?","options":["true","false","5","undefined"],"correctIndex":1,"explanation":"Strict equality compares both value and type; number 5 differs from string '5'."},
+      {"id":"op-03","prompt":"What is 10 % 3?","options":["0","1","3","3.33"],"correctIndex":1,"explanation":"The remainder after dividing 10 by 3 is 1."},
+      {"id":"op-04","prompt":"What is 2 ** 3?","options":["5","6","8","9"],"correctIndex":2,"explanation":"The exponentiation operator raises 2 to the third power."}
+    ]},
+    {"topicId":"cs.conditionals","items":[
+      {"id":"cond-01","prompt":"What does this print?","code":"if (4 > 2) {\n  console.log('yes');\n} else {\n  console.log('no');\n}","options":["yes","no","true","Nothing"],"correctIndex":0,"explanation":"4 > 2 is true, so the first branch runs."},
+      {"id":"cond-02","prompt":"What does this print?","code":"let age = 15;\nif (age >= 18) {\n  console.log('adult');\n} else {\n  console.log('minor');\n}","options":["adult","minor","15","Nothing"],"correctIndex":1,"explanation":"15 is less than 18, so the else branch runs."},
+      {"id":"cond-03","prompt":"Which operator means 'and' in a JavaScript condition?","options":["&&","||","===","!"],"correctIndex":0,"explanation":"&& is true only when both sides are truthy."},
+      {"id":"cond-04","prompt":"What does this print?","code":"let n = 0;\nif (n > 0) console.log('positive');\nelse if (n < 0) console.log('negative');\nelse console.log('zero');","options":["positive","negative","zero","Nothing"],"correctIndex":2,"explanation":"Neither comparison is true for 0, so the final else runs."}
+    ]},
+    {"topicId":"cs.loops","items":[
+      {"id":"loop-01","prompt":"How many times does this loop run?","code":"for (let i = 0; i < 3; i++) {\n  console.log(i);\n}","options":["2","3","4","It never stops"],"correctIndex":1,"explanation":"The loop runs for i = 0, 1, and 2."},
+      {"id":"loop-02","prompt":"What is printed?","code":"let sum = 0;\nfor (let i = 1; i <= 3; i++) sum += i;\nconsole.log(sum);","options":["3","5","6","9"],"correctIndex":2,"explanation":"The loop adds 1 + 2 + 3."},
+      {"id":"loop-03","prompt":"What does break do inside a loop?","options":["Skips just the current iteration","Stops the loop immediately","Restarts the loop","Creates an error"],"correctIndex":1,"explanation":"break exits the nearest enclosing loop."},
+      {"id":"loop-04","prompt":"What does this print?","code":"let x = 3;\nwhile (x > 0) x--;\nconsole.log(x);","options":["3","2","1","0"],"correctIndex":3,"explanation":"x decreases until the condition x > 0 is false."}
+    ]},
+    {"topicId":"cs.functions","items":[
+      {"id":"fn-01","prompt":"What does this print?","code":"function add(a, b) { return a + b; }\nconsole.log(add(2, 3));","options":["2","3","5","undefined"],"correctIndex":2,"explanation":"The function returns the sum of its two arguments."},
+      {"id":"fn-02","prompt":"What is printed when a function has no return statement?","code":"function greet() { console.log('hi'); }\nconsole.log(greet());","options":["Only hi","Only undefined","hi, then undefined","Nothing"],"correctIndex":2,"explanation":"greet prints hi, then the outer console.log prints its undefined return value."},
+      {"id":"fn-03","prompt":"Which values are the arguments in this call?","code":"function multiply(a, b) { return a * b; }\nmultiply(4, 5);","options":["a and b","4 and 5","multiply","20"],"correctIndex":1,"explanation":"4 and 5 are the values passed to the function's parameters."},
+      {"id":"fn-04","prompt":"What does this print?","code":"function label(item) { return 'Item: ' + item; }\nconsole.log(label('book'));","options":["item","book","Item: book","undefined"],"correctIndex":2,"explanation":"The function joins the prefix with its argument and returns the result."}
+    ]}
+  ]
+}
