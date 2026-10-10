@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ed">
+  <meta name="description" content="A transparent study planner for introductory programming.">
+  <title>Next Step — Adaptive Learning</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><span>next<span class="brand-accent">step</span><small>LEARNING LAB</small></span></div>
+      <nav class="side-nav" aria-label="Sections">
+        <a href="#dashboard" class="nav-link active"><span aria-hidden="true">◫</span> Overview</a>
+        <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
+        <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
+      </nav>
+      <div class="sidebar-note"><span class="status-dot"></span> Prototype · Milestone 1<br><small>Your progress stays in this browser.</small></div>
+    </aside>
+
+    <main id="dashboard" class="main-content">
+      <header class="topbar"><span class="eyebrow">PROGRAMMING FUNDAMENTALS</span><span class="topbar-right">Personal learning workspace <span class="avatar">N</span></span></header>
+      <div class="content-wrap">
+        <section class="intro"><div><p class="eyebrow">GOOD TO SEE YOU</p><h1>Find your next <em>step.</em></h1><p class="lead">A focused path through programming concepts, one learning objective at a time.</p></div><div class="intro-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit-center">✳</div></div></section>
+
+        <section class="summary-grid" aria-label="Your progress">
+          <div class="summary-card"><span class="summary-icon plum">◫</span><div><strong id="progress-count">0 / 20</strong><span>topics confident</span></div></div>
+          <div class="summary-card"><span class="summary-icon orange">⌁</span><div><strong id="ready-count">0</strong><span>ready to explore</span></div></div>
+          <div class="summary-card"><span class="summary-icon green">◎</span><div><strong id="path-label">Foundations</strong><span>current learning path</span></div></div>
+        </section>
+
+        <section class="workspace-grid" aria-label="Study planner">
+          <div class="planner-card">
+            <div class="section-heading"><div><p class="eyebrow">YOUR STUDY PLAN</p><h2>A good place to begin</h2></div><span class="beta-pill">BASELINE MODEL</span></div>
+            <div class="controls"><label>Learning goal<select id="goal-select"><option value="all">Build a strong foundation</option><option value="web">Build for the web</option><option value="problem">Solve coding problems</option></select></label><label>Time available<select id="time-select"><option value="15">15 minutes</option><option value="25" selected>25 minutes</option><option value="45">45 minutes</option></select></label></div>
+            <div id="recommendation" class="recommendation" aria-live="polite"></div>
+          </div>
+          <div class="path-card"><div class="section-heading"><div><p class="eyebrow">YOUR PATH</p><h2>Building blocks</h2></div></div><p class="muted">Each step builds on what came before it. Your topic status is self reported for now.</p><div id="path-preview" class="path-preview"></div><a class="text-link" href="#curriculum">Explore all topics <span aria-hidden="true">↗</span></a></div>
+        </section>
+
+        <section id="curriculum" class="curriculum-section"><div class="section-heading"><div><p class="eyebrow">CURRICULUM MAP</p><h2>Programming, step by step</h2><p class="muted">Choose a topic to see its objective and activity. Mark your current comfort level to shape the plan.</p></div><div class="filter-row" role="group" aria-label="Filter topics"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="ready" type="button">Ready</button><button class="filter" data-filter="locked" type="button">Later</button></div></div><div id="topic-grid" class="topic-grid"></div></section>
+
+        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Topics become available once their prerequisite topics are marked confident.</p></div><div><span class="method-number">02</span><h3>Match your session</h3><p>The planner considers your learning goal and available minutes, then prioritizes topics you have not started.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Recommendations are suggestions. Open any topic, choose your own next step, and adjust your self reported status.</p></div></div><p class="research-note">Research note: this version is a conventional study planner. It does not measure cognitive state or predict learning gain yet.</p></section>
+        <footer><span>Next Step · Research prototype</span><button id="reset-button" type="button">Reset my local progress</button></footer>
+      </div>
+    </main>
+  </div>
+  <dialog id="topic-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
