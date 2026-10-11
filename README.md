@@ -1,6 +1,6 @@
 # Next Step — adaptive learning prototype
 
-This repository is a five-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, baseline recommendations, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, and an optional account in the local .NET app.
+This repository is a six-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned baseline recommendation policy, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, and an optional account in the local .NET app.
 
 ## Run the app
 
@@ -12,7 +12,7 @@ dotnet run --project api/NextStep.Api.csproj --urls http://127.0.0.1:5080
 
 Open <http://127.0.0.1:5080>. SQLite is the default for local development. On first launch, EF Core creates `api/nextstep-dev.db` and the account tables. To choose another local file, set `NEXTSTEP_SQLITE_PATH` to an absolute path before running.
 
-For a **fresh, empty PostgreSQL database**, set `NEXTSTEP_DB_PROVIDER=postgres` and `NEXTSTEP_POSTGRES_CONNECTION` to a PostgreSQL connection string, then run the same command. The API creates its Identity, study, and cognitive tables on first launch. An existing Step 4 database gets the three new Step 5 tables automatically. Use HTTPS and a persistent ASP.NET Core Data Protection key ring before exposing the API beyond local development. This prototype still uses `EnsureCreated` plus a focused Step 5 upgrade rather than a general migration system; do not point it at an unrelated database or one containing the older `schema.sql` draft.
+For a **fresh, empty PostgreSQL database**, set `NEXTSTEP_DB_PROVIDER=postgres` and `NEXTSTEP_POSTGRES_CONNECTION` to a PostgreSQL connection string, then run the same command. The API creates its Identity, study, cognitive, and recommendation tables on first launch. Existing Step 4 or Step 5 databases receive the later tables automatically. Use HTTPS and a persistent ASP.NET Core Data Protection key ring before exposing the API beyond local development. This prototype still uses `EnsureCreated` plus focused upgrades rather than a general migration system; do not point it at an unrelated database or one containing the older `schema.sql` draft.
 
 `node serve.mjs` runs the browser-only version without accounts or database storage. The private hosted Sites preview is also browser-only because Sites hosts static files, not the .NET API. The cognitive assessment works in both modes; completed browser-only runs stay on that device.
 
@@ -30,7 +30,15 @@ The optional assessment has 12 vigilance trials, 8 backward digit sequences, 20 
 
 Run 1 is practice. Runs 2 and 3 form a preliminary personal reference for the same battery version. Run 4 onward shows descriptive differences from that reference. The displayed summaries use median response times and task accuracy, with lapses, false starts, and response-time differences where enough correct trials are available. No cognitive trait or diagnosis is inferred, and these results do not change the topic recommendation.
 
-The local .NET API stores completed cognitive sessions, individual trials, and questionnaires in separate tables. It validates task versions and structure and recalculates correctness from stored stimuli and responses. Response times and timestamps still originate in the browser. The consent notice was updated to version `2026-10-11-v2`; existing accounts must accept it before saving Step 5 data to the server.
+The local .NET API stores completed cognitive sessions, individual trials, and questionnaires in separate tables. It validates task versions and structure and recalculates correctness from stored stimuli and responses. Response times and timestamps still originate in the browser.
+
+## Step 6: strong baseline recommendation policy
+
+The deterministic `baseline-1.0` policy first removes topics whose prerequisites are not confident. It ranks the remaining topics using delayed reviews that are due, continuity for active study cycles, time fit, goal match, an evidence based mastery estimate, topic difficulty, and measurement uncertainty. The recommendation card shows the priority, mastery estimate, uncertainty, and up to three eligible alternatives. Learners can still choose any topic.
+
+The priority is a transparent planning score, not a predicted learning gain. Cognitive assessment results are intentionally excluded so later experiments can compare cognitive models with a meaningful educational baseline. The browser saves versioned recommendation records with the chosen topic, candidate count, factor breakdown, selection probability, and whether the learner started it. The local .NET account stores and exports those records in a separate `Recommendations` table.
+
+The consent notice is version `2026-10-11-v3`; existing accounts must accept it before saving Step 6 recommendation history to the server.
 
 ## Current limits
 
@@ -38,8 +46,9 @@ The local .NET API stores completed cognitive sessions, individual trials, and q
 - Browser progress is copied as a snapshot; using two browsers at once can replace later changes with an older copy. Choose which copy to load or upload when switching devices.
 - Historical browser timestamps and response times are client supplied. Knowledge and cognitive correctness are recalculated, but timing is not independently verified.
 - The short question forms and cognitive tasks are not calibrated. Pre/post differences are not validated learning gains; the short battery is not a reliable diagnostic measure of a stable cognitive trait.
+- Topic mastery and uncertainty are preliminary estimates from short, uncalibrated forms plus a weak status prior. Use them for planning and pilot evaluation only.
 - Consent language is a product prototype, not a formal research consent document. A real participant study needs review of consent, retention, security, and measurement procedures.
 
 ## Next step
 
-Run a small feasibility pilot to inspect completion time, missing trials, device effects, practice effects, and reliability. Calibrate the knowledge forms and compare a strong baseline recommendation policy before testing whether cognitive measures add useful predictive value.
+Add experiment assignment and immutable event logging for baseline, randomized eligible, and future cognitive policies. Then run a small feasibility pilot to inspect completion time, missing data, device effects, practice effects, and reliability before testing whether cognitive measures add useful predictive value.

@@ -110,6 +110,26 @@ public sealed class StateQuestionnaireRow
     public DateTimeOffset CompletedAt { get; set; }
 }
 
+public sealed class RecommendationRow
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public string Policy { get; set; } = "baseline";
+    public string ModelVersion { get; set; } = "";
+    public string TopicId { get; set; } = "";
+    public int Priority { get; set; }
+    public double SelectionProbability { get; set; }
+    public int CandidateCount { get; set; }
+    public string Goal { get; set; } = "all";
+    public int Minutes { get; set; }
+    public string ReasonsJson { get; set; } = "[]";
+    public string FactorsJson { get; set; } = "{}";
+    public double MasteryEstimate { get; set; }
+    public double MasteryUncertainty { get; set; }
+    public DateTimeOffset? AcceptedAt { get; set; }
+}
+
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<ConsentRecord> Consents => Set<ConsentRecord>();
@@ -120,6 +140,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     public DbSet<CognitiveSessionRow> CognitiveSessions => Set<CognitiveSessionRow>();
     public DbSet<CognitiveTrialRow> CognitiveTrials => Set<CognitiveTrialRow>();
     public DbSet<StateQuestionnaireRow> StateQuestionnaires => Set<StateQuestionnaireRow>();
+    public DbSet<RecommendationRow> Recommendations => Set<RecommendationRow>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -144,5 +165,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         model.Entity<CognitiveTrialRow>().Property(x => x.TaskVersion).HasMaxLength(40);
         model.Entity<CognitiveTrialRow>().Property(x => x.Condition).HasMaxLength(40);
         model.Entity<StateQuestionnaireRow>().Property(x => x.Version).HasMaxLength(40);
+        model.Entity<RecommendationRow>().HasIndex(x => new { x.UserId, x.CreatedAt });
+        model.Entity<RecommendationRow>().Property(x => x.Policy).HasMaxLength(30);
+        model.Entity<RecommendationRow>().Property(x => x.ModelVersion).HasMaxLength(40);
+        model.Entity<RecommendationRow>().Property(x => x.TopicId).HasMaxLength(100);
+        model.Entity<RecommendationRow>().Property(x => x.Goal).HasMaxLength(20);
     }
 }

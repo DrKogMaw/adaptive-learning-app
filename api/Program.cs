@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 
-const string consentVersion = "2026-10-11-v2";
-const string consentText = "Next Step stores your account email, topic choices, study session times, question answers, response times, and scores. If you choose to run the optional cognitive assessment, it also stores each task stimulus, response, timing, and your sleepiness, motivation, stress, sleep hours, recent study time, and available study time answers. These measures are exploratory; they are not a diagnosis or a validated measure of learning gain. You can withdraw consent to stop new data being saved, export your progress, or delete your account and its stored data. This prototype does not share your data with other learners. Contact the app operator before using it for a formal participant study.";
+const string consentVersion = "2026-10-11-v3";
+const string consentText = "Next Step stores your account email, topic choices, study session times, question answers, response times, scores, and the recommendations shown to you, including their planning scores and whether you started the recommended topic. If you choose to run the optional cognitive assessment, it also stores each task stimulus, response, timing, and your sleepiness, motivation, stress, sleep hours, recent study time, and available study time answers. These measures are exploratory; they are not a diagnosis or a validated measure of learning gain. You can withdraw consent to stop new data being saved, export your progress, or delete your account and its stored data. This prototype does not share your data with other learners. Contact the app operator before using it for a formal participant study.";
 
 var builder = WebApplication.CreateBuilder(args);
 var provider = builder.Configuration["NEXTSTEP_DB_PROVIDER"]?.ToLowerInvariant() ?? "sqlite";
@@ -40,6 +40,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
     await SchemaUpgrade.AddCognitiveTablesAsync(db);
+    await SchemaUpgrade.AddRecommendationTableAsync(db);
 }
 
 var distPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "dist"));
@@ -131,6 +132,7 @@ app.MapGet("/api/progress", async (ClaimsPrincipal principal, AppDbContext db) =
     var attempts = (await db.AssessmentAttempts.Where(x => x.UserId == userId).Include(x => x.Responses).ToListAsync()).OrderBy(x => x.CompletedAt).ToList();
     var cognitiveSessions = (await db.CognitiveSessions.Where(x => x.UserId == userId)
         .Include(x => x.Trials).Include(x => x.Questionnaire).ToListAsync()).OrderBy(x => x.CompletedAt).ToList();
+    var recommendations = (await db.Recommendations.Where(x => x.UserId == userId).ToListAsync()).OrderBy(x => x.CreatedAt).ToList();
     return Results.Ok(new
     {
         status = profile is null ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(profile.TopicStatusJson)!,
@@ -138,7 +140,12 @@ app.MapGet("/api/progress", async (ClaimsPrincipal principal, AppDbContext db) =
         studySessions = sessions.Select(x => new { x.Id, x.TopicId, x.PlannedMinutes, x.Status, x.StartedAt, x.StudyStartedAt, x.StudyCompletedAt, x.ActualSeconds, x.DueAt, x.ReviewCompletedAt, x.PriorItemExposure, x.PreAttemptId, x.PostAttemptId, x.DelayedAttemptId }),
         attempts = attempts.Select(x => new { x.Id, x.TopicId, sessionId = x.StudySessionId, x.AssessmentType, x.BankVersion, x.StartedAt, x.CompletedAt, x.Correct, x.Total, x.ScoringSource,
             responses = x.Responses.OrderBy(r => r.AnsweredAt).Select(r => new { r.ItemId, r.SelectedIndex, r.ResponseTimeMs, r.AnsweredAt }) }),
-        cognitiveSessions = cognitiveSessions.Select(CognitiveStorage.ToBrowserModel)
+        cognitiveSessions = cognitiveSessions.Select(CognitiveStorage.ToBrowserModel),
+        recommendations = recommendations.Select(x => new { x.Id, x.CreatedAt, x.Policy, x.ModelVersion, x.TopicId, x.Priority,
+            x.SelectionProbability, x.CandidateCount, x.Goal, x.Minutes,
+            reasons = JsonSerializer.Deserialize<List<string>>(x.ReasonsJson),
+            factors = JsonSerializer.Deserialize<Dictionary<string, int>>(x.FactorsJson),
+            x.MasteryEstimate, x.MasteryUncertainty, x.AcceptedAt })
     });
 }).RequireAuthorization();
 
@@ -150,7 +157,7 @@ app.MapPut("/api/progress", async (ProgressUpload upload, ClaimsPrincipal princi
         return Results.Problem("Current consent is required to save study data.", statusCode: 403);
     if (upload.Status is null || upload.Attempts is null || upload.StudySessions is null ||
         !new[] { "all", "web", "problem" }.Contains(upload.Goal) || !new[] { 15, 25, 45 }.Contains(upload.Minutes) ||
-        upload.Status.Count > 20 || upload.Attempts.Count > 200 || upload.StudySessions.Count > 100 ||
+        upload.Status.Count > 20 || upload.Attempts.Count > 200 || upload.StudySessions.Count > 100 || (upload.Recommendations?.Count ?? 0) > 200 ||
         upload.Status.Any(x => !KnownTopic(x.Key) || !new[] { "new", "practicing", "confident" }.Contains(x.Value)) ||
         (upload.Override is not null && !KnownTopic(upload.Override)))
         return Results.BadRequest(new { error = "Invalid progress settings or size." });
@@ -201,14 +208,34 @@ app.MapPut("/api/progress", async (ProgressUpload upload, ClaimsPrincipal princi
     bool Matches(Guid? attemptId, Guid sessionId, string type) => attemptRows.Any(a => a.Id == attemptId && a.StudySessionId == sessionId && a.AssessmentType == type);
     if (!CognitiveStorage.TryBuildRows(upload.CognitiveSessions ?? [], cognitiveConfig, userId, ValidDate, out var cognitiveRows, out var cognitiveError))
         return Results.BadRequest(new { error = cognitiveError });
+    var recommendationRows = new List<RecommendationRow>();
+    var recommendationIds = new HashSet<Guid>();
+    foreach (var r in upload.Recommendations ?? [])
+    {
+        if (r.Id == Guid.Empty || !recommendationIds.Add(r.Id) || !KnownTopic(r.TopicId) || r.Policy != "baseline" || r.ModelVersion != "baseline-1.0" ||
+            !ValidDate(r.CreatedAt) || !OptionalDate(r.AcceptedAt) || (r.AcceptedAt is not null && r.AcceptedAt < r.CreatedAt) || r.Priority is < 0 or > 100 ||
+            r.SelectionProbability is < 0 or > 1 || r.CandidateCount is < 1 or > 20 || !new[] { "all", "web", "problem" }.Contains(r.Goal) ||
+            !new[] { 15, 25, 45 }.Contains(r.Minutes) || r.Reasons is null || r.Reasons.Count is < 1 or > 8 ||
+            r.Reasons.Any(value => value.Length > 100) || r.Factors is null || r.Factors.Count is < 1 or > 10 ||
+            r.Factors.Any(value => value.Key.Length > 30 || value.Value is < -100 or > 100) ||
+            r.MasteryEstimate is < 0 or > 1 || r.MasteryUncertainty is < 0 or > 1)
+            return Results.BadRequest(new { error = "Invalid recommendation history." });
+        recommendationRows.Add(new RecommendationRow { Id = r.Id, UserId = userId, CreatedAt = r.CreatedAt, Policy = r.Policy,
+            ModelVersion = r.ModelVersion, TopicId = r.TopicId, Priority = r.Priority, SelectionProbability = r.SelectionProbability,
+            CandidateCount = r.CandidateCount, Goal = r.Goal, Minutes = r.Minutes, ReasonsJson = JsonSerializer.Serialize(r.Reasons),
+            FactorsJson = JsonSerializer.Serialize(r.Factors), MasteryEstimate = r.MasteryEstimate,
+            MasteryUncertainty = r.MasteryUncertainty, AcceptedAt = r.AcceptedAt });
+    }
 
     await using var transaction = await db.Database.BeginTransactionAsync();
+    await db.Recommendations.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.CognitiveSessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.AssessmentAttempts.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.StudySessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     db.StudySessions.AddRange(sessionRows);
     db.AssessmentAttempts.AddRange(attemptRows);
     db.CognitiveSessions.AddRange(cognitiveRows);
+    db.Recommendations.AddRange(recommendationRows);
     var profile = await db.LearnerProfiles.FindAsync(userId);
     if (profile is null) { profile = new LearnerProfile { UserId = userId }; db.LearnerProfiles.Add(profile); }
     profile.Goal = upload.Goal;
@@ -217,7 +244,7 @@ app.MapPut("/api/progress", async (ProgressUpload upload, ClaimsPrincipal princi
     profile.TopicStatusJson = JsonSerializer.Serialize(upload.Status);
     await db.SaveChangesAsync();
     await transaction.CommitAsync();
-    return Results.Ok(new { saved = true, studySessions = sessionRows.Count, attempts = attemptRows.Count, responses = attemptRows.Sum(x => x.Responses.Count), cognitiveSessions = cognitiveRows.Count, cognitiveTrials = cognitiveRows.Sum(x => x.Trials.Count) });
+    return Results.Ok(new { saved = true, studySessions = sessionRows.Count, attempts = attemptRows.Count, responses = attemptRows.Sum(x => x.Responses.Count), cognitiveSessions = cognitiveRows.Count, cognitiveTrials = cognitiveRows.Sum(x => x.Trials.Count), recommendations = recommendationRows.Count });
 }).RequireAuthorization();
 
 app.MapDelete("/api/account", async (ClaimsPrincipal principal, HttpContext context, IAntiforgery antiforgery, AppDbContext db) =>
@@ -226,6 +253,7 @@ app.MapDelete("/api/account", async (ClaimsPrincipal principal, HttpContext cont
     var userId = CurrentUserId(principal);
     await using var transaction = await db.Database.BeginTransactionAsync();
     await db.CognitiveSessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
+    await db.Recommendations.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.AssessmentAttempts.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.StudySessions.Where(x => x.UserId == userId).ExecuteDeleteAsync();
     await db.LearnerProfiles.Where(x => x.UserId == userId).ExecuteDeleteAsync();
@@ -298,7 +326,11 @@ record QuizSubmission(string BankVersion, List<QuizAnswer>? Responses);
 record QuizAnswer(string ItemId, int SelectedIndex, int ResponseTimeMs, DateTimeOffset AnsweredAt);
 record ConsentSubmission(string Version, bool Accepted);
 record ProgressUpload(Dictionary<string, string>? Status, string Goal, int Minutes, string? Override,
-    List<AttemptUpload>? Attempts, List<SessionUpload>? StudySessions, List<CognitiveSessionUpload>? CognitiveSessions);
+    List<AttemptUpload>? Attempts, List<SessionUpload>? StudySessions, List<CognitiveSessionUpload>? CognitiveSessions,
+    List<RecommendationUpload>? Recommendations);
+record RecommendationUpload(Guid Id, DateTimeOffset CreatedAt, string Policy, string ModelVersion, string TopicId,
+    int Priority, double SelectionProbability, int CandidateCount, string Goal, int Minutes, List<string>? Reasons,
+    Dictionary<string, int>? Factors, double MasteryEstimate, double MasteryUncertainty, DateTimeOffset? AcceptedAt);
 record AttemptUpload(Guid Id, string TopicId, Guid? SessionId, string AssessmentType, string BankVersion,
     DateTimeOffset StartedAt, DateTimeOffset CompletedAt, List<QuizAnswer>? Responses);
 record SessionUpload(Guid Id, string TopicId, int PlannedMinutes, string Status, DateTimeOffset StartedAt,

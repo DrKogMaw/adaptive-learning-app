@@ -1,4 +1,5 @@
-import { topics, topicById, validateCurriculum, isEligible, recommend } from './curriculum.mjs';
+import { topics, topicById, validateCurriculum, isEligible } from './curriculum.mjs';
+import { recommendBaseline, recommendationRecord } from './recommendation.mjs';
 import { loadChecks, scoreResponses } from './knowledge.mjs';
 import { loadStudyForms, validateStudyForms, createStudySession, recordPretest, startStudy, finishStudy, recordPosttest, isReviewDue, recordDelayed } from './study.mjs';
 import { mountAccount } from './account.mjs';
@@ -12,7 +13,7 @@ validateStudyForms(bank, studyForms);
 const formsByTopic = Object.fromEntries(studyForms.forms.map(form => [form.topicId, form]));
 const apiReady = fetch('/api/health').then(async response => response.ok && (await response.json()).service === 'nextstep-api').catch(() => false);
 const STORAGE_KEY = 'nextstep-milestone-1';
-const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[],cognitiveSessions:[]};
+const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[],cognitiveSessions:[],recommendations:[]};
 let accountController = null;
 let cognitiveController = null;
 let state;
@@ -31,6 +32,8 @@ if (!Array.isArray(state.studySessions)) state.studySessions=[];
 state.studySessions=state.studySessions.filter(session=>session?.id && formsByTopic[session.topicId] && ['pretest','studying','posttest','awaiting-review','complete'].includes(session.status));
 if (!Array.isArray(state.cognitiveSessions)) state.cognitiveSessions=[];
 state.cognitiveSessions=state.cognitiveSessions.filter(session=>session?.id&&Array.isArray(session.trials)&&session.questionnaire).slice(-50);
+if (!Array.isArray(state.recommendations)) state.recommendations=[];
+state.recommendations=state.recommendations.filter(item=>item?.id&&topicById[item.topicId]&&item.policy==='baseline'&&Number.isFinite(item.priority)).slice(-200);
 
 const $ = selector => document.querySelector(selector);
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));accountController?.scheduleSync();}
@@ -42,7 +45,17 @@ function attemptById(id){return state.attempts.find(attempt=>attempt.id===id);}
 function replaceSession(updated){state.studySessions=state.studySessions.map(session=>session.id===updated.id?updated:session);save();render();return updated;}
 function effectiveRecommendation(){
   if(state.override) return {topic:topicById[state.override],override:true,fitsTime:topicById[state.override].minutes<=state.minutes};
-  return recommend(topics,state.status,state.goal,state.minutes);
+  return recommendBaseline({topics,status:state.status,goal:state.goal,minutes:state.minutes,attempts:state.attempts,studySessions:state.studySessions});
+}
+function logRecommendation(rec){
+  if(!rec||rec.override)return;
+  const last=state.recommendations.at(-1);
+  const signature=[rec.topic.id,rec.priority,state.goal,state.minutes,JSON.stringify(rec.components)].join('|');
+  const lastSignature=last&&[last.topicId,last.priority,last.goal,last.minutes,JSON.stringify(last.factors)].join('|');
+  if(signature===lastSignature)return;
+  state.recommendations.push(recommendationRecord(rec,state));
+  state.recommendations=state.recommendations.slice(-200);
+  save();
 }
 function topicStatus(topic){return state.status[topic.id] === 'confident' ? 'confident' : state.status[topic.id] === 'practicing' ? 'practicing' : isEligible(topic,state.status) ? 'ready' : 'locked';}
 function statusLabel(status){return {confident:'Confident',practicing:'Practicing',ready:'Ready',locked:'Later'}[status];}
@@ -61,14 +74,18 @@ function renderRecommendation(){
   const t=rec.topic;
   const reasons=[];
   if(rec.override) reasons.push('Chosen by you');
-  else {reasons.push('Prerequisites ready');if(rec.isGoal) reasons.push('Matches your goal');if(rec.fitsTime) reasons.push('Fits your time');}
+  else reasons.push(...rec.reasons);
+  logRecommendation(rec);
   const note=rec.override && !isEligible(t,state.status) ? 'You chose this topic before marking its prerequisites confident.' : !rec.fitsTime ? 'This activity may take longer than your available time.' : `Suggested activity: ${t.activity}`;
   const last=latestAttempt(t.id);
   const session=latestSession(t.id);
-  $('#recommendation').innerHTML=`<div class="rec-top"><span class="rec-label">${rec.override?'YOUR CHOICE':'RECOMMENDED NEXT'}</span><span class="rec-number">${escapeHtml(t.unit)}</span></div><h3>${escapeHtml(t.title)}</h3><p>${escapeHtml(note)}</p><div class="rec-meta"><span>◷ ${t.minutes} min</span>${reasons.map(reason=>`<span>✓ ${escapeHtml(reason)}</span>`).join('')}${last?`<span>Latest check ${last.correct}/${last.total}</span>`:''}</div><div class="rec-actions"><button class="primary-button" type="button" data-open="${t.id}">Explore topic ↗</button>${formsByTopic[t.id]?`<button class="quiet-button" type="button" id="recommended-study">${session?'View study cycle':'Start study cycle'}</button>`:''}${rec.override?'<button class="quiet-button" type="button" id="clear-override">Back to suggestion</button>':'<a class="quiet-button" href="#curriculum">Choose another topic</a>'}</div>`;
+  const alternatives=!rec.override&&rec.ranked.slice(1,4).map(item=>`<button type="button" data-alternative="${item.topic.id}"><span>${escapeHtml(item.topic.title)}</span><strong>${item.priority}</strong></button>`).join('');
+  const evidence=!rec.override?`<details class="rec-explanation"><summary>Why this ranks first</summary><div class="score-summary"><span><strong>${rec.priority}</strong> priority</span><span><strong>${Math.round(rec.mastery.estimate*100)}%</strong> estimated mastery</span><span><strong>±${Math.round(rec.mastery.uncertainty*100)}</strong> uncertainty</span></div><p>This transparent planning score combines review timing, active study, time fit, goal match, learning need, difficulty, and uncertainty. It is not a predicted learning gain.</p>${alternatives?`<div class="rec-alternatives"><small>Other eligible topics</small>${alternatives}</div>`:''}</details>`:'';
+  $('#recommendation').innerHTML=`<div class="rec-top"><span class="rec-label">${rec.override?'YOUR CHOICE':'RECOMMENDED NEXT'}</span><span class="rec-number">${escapeHtml(t.unit)}${rec.override?'':` · priority ${rec.priority}`}</span></div><h3>${escapeHtml(t.title)}</h3><p>${escapeHtml(note)}</p><div class="rec-meta"><span>◷ ${t.minutes} min</span>${reasons.map(reason=>`<span>✓ ${escapeHtml(reason)}</span>`).join('')}${last?`<span>Latest check ${last.correct}/${last.total}</span>`:''}</div><div class="rec-actions"><button class="primary-button" type="button" data-open="${t.id}">Explore topic ↗</button>${formsByTopic[t.id]?`<button class="quiet-button" type="button" id="recommended-study">${session?'View study cycle':'Start study cycle'}</button>`:''}${rec.override?'<button class="quiet-button" type="button" id="clear-override">Back to suggestion</button>':'<a class="quiet-button" href="#curriculum">Choose another topic</a>'}</div>${evidence}`;
   $('#recommendation [data-open]').addEventListener('click',()=>openTopic(t.id));
   $('#recommended-study')?.addEventListener('click',()=>startOrResumeStudy(t.id));
   $('#clear-override')?.addEventListener('click',()=>{state.override=null;save();render();});
+  $('#recommendation').querySelectorAll('[data-alternative]').forEach(button=>button.addEventListener('click',()=>openTopic(button.dataset.alternative)));
 }
 function renderPath(){
   const rec=effectiveRecommendation()?.topic;
@@ -121,7 +138,13 @@ function openTopic(id){
 function startOrResumeStudy(topicId){
   if(!formsByTopic[topicId])return;
   let session=latestSession(topicId);
-  if(!session){session={...createStudySession(topicId,topicById[topicId].minutes),priorItemExposure:state.attempts.some(attempt=>attempt.topicId===topicId&&(!attempt.assessmentType||attempt.assessmentType==='diagnostic'))};state.studySessions.push(session);save();render();}
+  if(!session){
+    session={...createStudySession(topicId,topicById[topicId].minutes),priorItemExposure:state.attempts.some(attempt=>attempt.topicId===topicId&&(!attempt.assessmentType||attempt.assessmentType==='diagnostic'))};
+    state.studySessions.push(session);
+    const record=[...state.recommendations].reverse().find(item=>item.topicId===topicId&&!item.acceptedAt);
+    if(record)record.acceptedAt=new Date().toISOString();
+    save();render();
+  }
   showStudySession(session.id);
 }
 function showStudySession(sessionId){
@@ -212,7 +235,7 @@ $('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes)
 $('#goal-select').addEventListener('change',event=>{state.goal=event.target.value;state.override=null;save();render();});
 $('#time-select').addEventListener('change',event=>{state.minutes=Number(event.target.value);state.override=null;save();render();});
 document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;document.querySelectorAll('.filter').forEach(item=>item.classList.toggle('active',item===button));renderTopics();}));
-$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, study sessions, and cognitive assessments in this browser and your account?':'Reset your local topic status, quiz attempts, study sessions, and cognitive assessments?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
+$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, study sessions, recommendation history, and cognitive assessments in this browser and your account?':'Reset your local topic status, quiz attempts, study sessions, recommendation history, and cognitive assessments?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
 $('#topic-dialog').addEventListener('click',event=>{if(event.target.id==='topic-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('click',event=>{if(event.target.id==='quiz-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('close',()=>{if(studyTimer)clearInterval(studyTimer);studyTimer=null;});
@@ -227,7 +250,7 @@ if (await apiReady) {
   accountController = mountAccount({
     getState: () => state,
     setState: remote => {
-      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || [],cognitiveSessions:remote.cognitiveSessions || []};
+      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || [],cognitiveSessions:remote.cognitiveSessions || [],recommendations:remote.recommendations || []};
       $('#goal-select').value=state.goal;
       $('#time-select').value=String(state.minutes);
       save();render();

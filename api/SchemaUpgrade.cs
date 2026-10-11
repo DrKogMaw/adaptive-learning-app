@@ -60,4 +60,37 @@ public static class SchemaUpgrade
         await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS \"IX_CognitiveTrials_CognitiveSessionId_TaskType_TrialIndex\" ON \"CognitiveTrials\" (\"CognitiveSessionId\", \"TaskType\", \"TrialIndex\")");
         await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS \"IX_StateQuestionnaires_CognitiveSessionId\" ON \"StateQuestionnaires\" (\"CognitiveSessionId\")");
     }
+
+    public static async Task AddRecommendationTableAsync(AppDbContext db)
+    {
+        var postgres = db.Database.IsNpgsql();
+        var id = postgres ? "uuid" : "TEXT";
+        var time = postgres ? "timestamp with time zone" : "TEXT";
+        var number = postgres ? "integer" : "INTEGER";
+        var real = postgres ? "double precision" : "REAL";
+        var text = postgres ? "text" : "TEXT";
+#pragma warning disable EF1002
+        await db.Database.ExecuteSqlRawAsync($"""
+            CREATE TABLE IF NOT EXISTS "Recommendations" (
+                "Id" {id} NOT NULL PRIMARY KEY,
+                "UserId" {id} NOT NULL,
+                "CreatedAt" {time} NOT NULL,
+                "Policy" {text} NOT NULL,
+                "ModelVersion" {text} NOT NULL,
+                "TopicId" {text} NOT NULL,
+                "Priority" {number} NOT NULL,
+                "SelectionProbability" {real} NOT NULL,
+                "CandidateCount" {number} NOT NULL,
+                "Goal" {text} NOT NULL,
+                "Minutes" {number} NOT NULL,
+                "ReasonsJson" {text} NOT NULL,
+                "FactorsJson" {text} NOT NULL,
+                "MasteryEstimate" {real} NOT NULL,
+                "MasteryUncertainty" {real} NOT NULL,
+                "AcceptedAt" {time} NULL
+            )
+            """);
+#pragma warning restore EF1002
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS \"IX_Recommendations_UserId_CreatedAt\" ON \"Recommendations\" (\"UserId\", \"CreatedAt\")");
+    }
 }
