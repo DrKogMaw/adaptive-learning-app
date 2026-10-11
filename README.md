@@ -2,6 +2,8 @@
 
 This repository is an eight-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned feasibility experiment, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, a pilot quality dashboard, and an optional account in the local .NET app.
 
+**Project status:** the prototype milestones are complete and the next phase is feasibility-pilot preparation.
+
 ## Run the app
 
 Install .NET SDK 10. From this folder:
