@@ -15,10 +15,11 @@
       <nav class="side-nav" aria-label="Sections">
         <a href="#dashboard" class="nav-link active"><span aria-hidden="true">◫</span> Overview</a>
         <a href="#cognitive" class="nav-link"><span aria-hidden="true">◉</span> Assessment</a>
+        <a href="#pilot" class="nav-link"><span aria-hidden="true">◇</span> Pilot quality</a>
         <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
         <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
       </nav>
-      <div class="sidebar-note"><span class="status-dot"></span> Prototype · <span id="milestone-label">Milestone 7</span><br><small id="storage-label">Your progress stays in this browser.</small></div>
+      <div class="sidebar-note"><span class="status-dot"></span> Prototype · <span id="milestone-label">Milestone 8</span><br><small id="storage-label">Your progress stays in this browser.</small></div>
     </aside>
 
     <main id="dashboard" class="main-content">
@@ -48,9 +49,11 @@
 
         <section class="study-section" aria-label="Study cycles"><div class="section-heading"><div><p class="eyebrow">LEARNING EVIDENCE</p><h2>Study, then check again</h2><p class="muted">A precheck, a focused study period, an immediate check, and a review after 24 hours.</p></div></div><div id="study-panel" class="study-panel"></div></section>
 
+        <section id="pilot" class="pilot-section" aria-label="Pilot data quality"><div class="section-heading"><div><p class="eyebrow">FEASIBILITY PILOT</p><h2>Is the evidence usable?</h2><p class="muted">Inspect completeness, timing, delayed reviews, recommendation uptake, and repeated cognitive measurements before testing educational claims.</p></div><span class="beta-pill">ANALYSIS 1.0</span></div><div id="pilot-panel"></div></section>
+
         <section id="curriculum" class="curriculum-section"><div class="section-heading"><div><p class="eyebrow">CURRICULUM MAP</p><h2>Programming, step by step</h2><p class="muted">Choose a topic to see its objective and activity. Mark your current comfort level to shape the plan.</p></div><div class="filter-row" role="group" aria-label="Filter topics"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="ready" type="button">Ready</button><button class="filter" data-filter="locked" type="button">Later</button></div></div><div id="topic-grid" class="topic-grid"></div></section>
 
-        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Safe eligible set</h3><p>Only topics with confident prerequisites enter either recommendation policy.</p></div><div><span class="method-number">02</span><h3>Known assignment</h3><p>This browser keeps one 50/50 pilot assignment: transparent baseline or equal-probability eligible selection.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Every suggestion can be overridden. Cognitive results remain separate from topic selection.</p></div></div><p class="research-note">Research note: this feasibility assignment tests data collection and policy behavior. It does not establish educational benefit, predict learning gain, or diagnose cognitive traits.</p></section>
+        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Safe eligible set</h3><p>Only topics with confident prerequisites enter either recommendation policy.</p></div><div><span class="method-number">02</span><h3>Known assignment</h3><p>This browser keeps one 50/50 pilot assignment: transparent baseline or equal-probability eligible selection.</p></div><div><span class="method-number">03</span><h3>Quality before claims</h3><p>The pilot view checks missingness, timing, uptake, and repeated measures before any effectiveness analysis.</p></div></div><p class="research-note">Research note: this feasibility assignment tests data collection and policy behavior. It does not establish educational benefit, predict learning gain, or diagnose cognitive traits.</p></section>
         <footer><span>Next Step · Research prototype</span><button id="reset-button" type="button">Reset my local progress</button></footer>
       </div>
     </main>

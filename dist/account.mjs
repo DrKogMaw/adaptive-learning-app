@@ -3,7 +3,7 @@ export function mountAccount({getState,setState}) {
   const panel=document.querySelector('#account-panel');
   const storageLabel=document.querySelector('#storage-label');
   section.hidden=false;
-  document.querySelector('#milestone-label').textContent='Milestone 7';
+  document.querySelector('#milestone-label').textContent='Milestone 8';
   let user=null,consent=null,csrf=null,syncEnabled=false,syncTimer=null,syncing=false,dirty=false;
   const api=async (path,options={})=>{
     const response=await fetch(path,{credentials:'same-origin',...options});

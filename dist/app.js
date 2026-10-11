@@ -5,6 +5,7 @@ import { loadChecks, scoreResponses } from './knowledge.mjs';
 import { loadStudyForms, validateStudyForms, createStudySession, recordPretest, startStudy, finishStudy, recordPosttest, isReviewDue, recordDelayed } from './study.mjs';
 import { mountAccount } from './account.mjs';
 import { mountCognitive } from './cognitive.mjs';
+import { mountPilot } from './pilot.mjs';
 
 validateCurriculum();
 const bank = await loadChecks();
@@ -18,6 +19,7 @@ const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],
 const browserSessionId=crypto.randomUUID();
 let accountController = null;
 let cognitiveController = null;
+let pilotController = null;
 let state;
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
@@ -128,7 +130,7 @@ function renderTopics(){
   $('#topic-grid').innerHTML=shown.length ? shown.map((topic,index)=>{const status=topicStatus(topic),last=latestAttempt(topic.id);return `<button class="topic-card ${status==='locked'?'locked':''}" type="button" data-topic="${topic.id}" aria-label="Open ${escapeHtml(topic.title)}"><div class="topic-top"><span>${escapeHtml(topic.unit.toUpperCase())}</span><span>${String(topics.indexOf(topic)+1).padStart(2,'0')}</span></div><h3>${escapeHtml(topic.title)}</h3><p>${escapeHtml(topic.objective)}</p><div class="topic-bottom"><span>${last?`Check ${last.correct}/${last.total}`:`◷ ${topic.minutes} min`}</span><span class="topic-status ${status}">${statusLabel(status)}</span></div></button>`;}).join('') : '<div class="empty-state">No topics in this view yet. Try another filter.</div>';
   $('#topic-grid').querySelectorAll('[data-topic]').forEach(button=>button.addEventListener('click',()=>openTopic(button.dataset.topic)));
 }
-function render(){renderSummary();renderRecommendation();renderPath();renderStudyPanel();renderTopics();cognitiveController?.render();}
+function render(){renderSummary();renderRecommendation();renderPath();renderStudyPanel();renderTopics();cognitiveController?.render();pilotController?.render();}
 
 function openTopic(id){
   const t=topicById[id];
@@ -261,6 +263,8 @@ cognitiveController = await mountCognitive({
   getSessions:()=>state.cognitiveSessions,
   addSession:session=>{state.cognitiveSessions.push(session);state.cognitiveSessions=state.cognitiveSessions.slice(-50);logEvent('cognitive_assessment_completed',{cognitiveSessionId:session.id,batteryVersion:session.batteryVersion});save();render();}
 });
+pilotController=mountPilot({getState:()=>state});
+render();
 if (await apiReady) {
   accountController = mountAccount({
     getState: () => state,

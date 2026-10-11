@@ -1,6 +1,6 @@
 # Next Step — adaptive learning prototype
 
-This repository is a seven-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned feasibility experiment, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, and an optional account in the local .NET app.
+This repository is an eight-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned feasibility experiment, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, a pilot quality dashboard, and an optional account in the local .NET app.
 
 ## Run the app
 
@@ -46,6 +46,12 @@ Versioned research events record assignment, recommendation exposure and accepta
 
 The consent notice is version `2026-10-11-v4`; existing accounts must accept it before saving the pilot assignment and interaction events to the server.
 
+## Step 8: pilot quality and analysis readiness
+
+The personal pilot dashboard summarizes study-cycle completeness, due delayed reviews, recommendation acceptance and overrides, cognitive-run coverage, recorded study duration, practice change, and descriptive consistency between cognitive reference runs. It can export one row per study session as CSV without account identifiers.
+
+The frozen `pilot-analysis-1.0` plan defines feasibility measures, quality flags, version-freeze requirements, and the gate for a later powered study. These checks describe whether data collection is usable; they do not estimate policy effects or establish educational benefit. A cross-user pilot still requires participant recruitment, research review, and cohort-level analysis outside the browser-only hosted preview.
+
 ## Current limits
 
 - The hosted preview still keeps all progress in that browser. Accounts and PostgreSQL require running/deploying the .NET API separately.
@@ -57,4 +63,4 @@ The consent notice is version `2026-10-11-v4`; existing accounts must accept it 
 
 ## Next step
 
-Run a small feasibility pilot to inspect completion time, missing data, override rates, device effects, practice effects, and reliability. Define exclusion rules and an analysis plan before testing whether cognitive measures add useful predictive value.
+Freeze the prototype versions, complete research and retention review, recruit the feasibility cohort, and analyze the predefined quality measures before designing a powered effectiveness study.
