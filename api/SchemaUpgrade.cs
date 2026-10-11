@@ -93,4 +93,30 @@ public static class SchemaUpgrade
 #pragma warning restore EF1002
         await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS \"IX_Recommendations_UserId_CreatedAt\" ON \"Recommendations\" (\"UserId\", \"CreatedAt\")");
     }
+
+    public static async Task AddExperimentTablesAsync(AppDbContext db)
+    {
+        var postgres = db.Database.IsNpgsql();
+        var id = postgres ? "uuid" : "TEXT";
+        var time = postgres ? "timestamp with time zone" : "TEXT";
+        var real = postgres ? "double precision" : "REAL";
+        var text = postgres ? "text" : "TEXT";
+#pragma warning disable EF1002
+        await db.Database.ExecuteSqlRawAsync($"""
+            CREATE TABLE IF NOT EXISTS "ExperimentAssignments" (
+                "Id" {id} NOT NULL PRIMARY KEY, "UserId" {id} NOT NULL,
+                "ExperimentVersion" {text} NOT NULL, "Policy" {text} NOT NULL,
+                "AssignmentProbability" {real} NOT NULL, "AssignedAt" {time} NOT NULL)
+            """);
+        await db.Database.ExecuteSqlRawAsync($"""
+            CREATE TABLE IF NOT EXISTS "ResearchEvents" (
+                "Id" {id} NOT NULL PRIMARY KEY, "UserId" {id} NOT NULL,
+                "SchemaVersion" {text} NOT NULL, "Type" {text} NOT NULL,
+                "OccurredAt" {time} NOT NULL, "SessionId" {id} NOT NULL,
+                "PayloadJson" {text} NOT NULL)
+            """);
+#pragma warning restore EF1002
+        await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS \"IX_ExperimentAssignments_UserId\" ON \"ExperimentAssignments\" (\"UserId\")");
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS \"IX_ResearchEvents_UserId_OccurredAt\" ON \"ResearchEvents\" (\"UserId\", \"OccurredAt\")");
+    }
 }

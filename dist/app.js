@@ -1,5 +1,6 @@
 import { topics, topicById, validateCurriculum, isEligible } from './curriculum.mjs';
-import { recommendBaseline, recommendationRecord } from './recommendation.mjs';
+import { recommendBaseline, recommendRandomEligible, recommendationRecord } from './recommendation.mjs';
+import { createAssignment, validAssignment, researchEvent } from './experiment.mjs';
 import { loadChecks, scoreResponses } from './knowledge.mjs';
 import { loadStudyForms, validateStudyForms, createStudySession, recordPretest, startStudy, finishStudy, recordPosttest, isReviewDue, recordDelayed } from './study.mjs';
 import { mountAccount } from './account.mjs';
@@ -13,7 +14,8 @@ validateStudyForms(bank, studyForms);
 const formsByTopic = Object.fromEntries(studyForms.forms.map(form => [form.topicId, form]));
 const apiReady = fetch('/api/health').then(async response => response.ok && (await response.json()).service === 'nextstep-api').catch(() => false);
 const STORAGE_KEY = 'nextstep-milestone-1';
-const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[],cognitiveSessions:[],recommendations:[]};
+const defaultState = {status:{},goal:'all',minutes:25,override:null,attempts:[],studySessions:[],cognitiveSessions:[],recommendations:[],experimentAssignment:null,researchEvents:[]};
+const browserSessionId=crypto.randomUUID();
 let accountController = null;
 let cognitiveController = null;
 let state;
@@ -33,10 +35,15 @@ state.studySessions=state.studySessions.filter(session=>session?.id && formsByTo
 if (!Array.isArray(state.cognitiveSessions)) state.cognitiveSessions=[];
 state.cognitiveSessions=state.cognitiveSessions.filter(session=>session?.id&&Array.isArray(session.trials)&&session.questionnaire).slice(-50);
 if (!Array.isArray(state.recommendations)) state.recommendations=[];
-state.recommendations=state.recommendations.filter(item=>item?.id&&topicById[item.topicId]&&item.policy==='baseline'&&Number.isFinite(item.priority)).slice(-200);
+state.recommendations=state.recommendations.filter(item=>item?.id&&topicById[item.topicId]&&['baseline','randomized-eligible'].includes(item.policy)&&Number.isFinite(item.priority)).slice(-200);
+if(!Array.isArray(state.researchEvents))state.researchEvents=[];
+state.researchEvents=state.researchEvents.filter(item=>item?.id&&item.schemaVersion==='1.0'&&item.type&&Number.isFinite(Date.parse(item.occurredAt))).slice(-1000);
+const newAssignment=!validAssignment(state.experimentAssignment);
+if(newAssignment)state.experimentAssignment=createAssignment();
 
 const $ = selector => document.querySelector(selector);
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));accountController?.scheduleSync();}
+function logEvent(type,payload={}){state.researchEvents.push(researchEvent(type,payload,browserSessionId));state.researchEvents=state.researchEvents.slice(-1000);}
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
 function latestAttempt(topicId){return [...state.attempts].reverse().find(attempt=>attempt.topicId===topicId);}
 function formatDate(value){return new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));}
@@ -45,15 +52,17 @@ function attemptById(id){return state.attempts.find(attempt=>attempt.id===id);}
 function replaceSession(updated){state.studySessions=state.studySessions.map(session=>session.id===updated.id?updated:session);save();render();return updated;}
 function effectiveRecommendation(){
   if(state.override) return {topic:topicById[state.override],override:true,fitsTime:topicById[state.override].minutes<=state.minutes};
-  return recommendBaseline({topics,status:state.status,goal:state.goal,minutes:state.minutes,attempts:state.attempts,studySessions:state.studySessions});
+  const input={topics,status:state.status,goal:state.goal,minutes:state.minutes,attempts:state.attempts,studySessions:state.studySessions};
+  return state.experimentAssignment.policy==='randomized-eligible'?recommendRandomEligible(input,state.experimentAssignment.id):recommendBaseline(input);
 }
 function logRecommendation(rec){
   if(!rec||rec.override)return;
   const last=state.recommendations.at(-1);
-  const signature=[rec.topic.id,rec.priority,state.goal,state.minutes,JSON.stringify(rec.components)].join('|');
-  const lastSignature=last&&[last.topicId,last.priority,last.goal,last.minutes,JSON.stringify(last.factors)].join('|');
+  const signature=[rec.policy||'baseline',rec.topic.id,rec.priority,state.goal,state.minutes,JSON.stringify(rec.components)].join('|');
+  const lastSignature=last&&[last.policy,last.topicId,last.priority,last.goal,last.minutes,JSON.stringify(last.factors)].join('|');
   if(signature===lastSignature)return;
-  state.recommendations.push(recommendationRecord(rec,state));
+  const record=recommendationRecord(rec,state);state.recommendations.push(record);
+  logEvent('recommendation_shown',{recommendationId:record.id,policy:record.policy,topicId:record.topicId,selectionProbability:record.selectionProbability,candidateCount:record.candidateCount});
   state.recommendations=state.recommendations.slice(-200);
   save();
 }
@@ -79,12 +88,14 @@ function renderRecommendation(){
   const note=rec.override && !isEligible(t,state.status) ? 'You chose this topic before marking its prerequisites confident.' : !rec.fitsTime ? 'This activity may take longer than your available time.' : `Suggested activity: ${t.activity}`;
   const last=latestAttempt(t.id);
   const session=latestSession(t.id);
-  const alternatives=!rec.override&&rec.ranked.slice(1,4).map(item=>`<button type="button" data-alternative="${item.topic.id}"><span>${escapeHtml(item.topic.title)}</span><strong>${item.priority}</strong></button>`).join('');
-  const evidence=!rec.override?`<details class="rec-explanation"><summary>Why this ranks first</summary><div class="score-summary"><span><strong>${rec.priority}</strong> priority</span><span><strong>${Math.round(rec.mastery.estimate*100)}%</strong> estimated mastery</span><span><strong>±${Math.round(rec.mastery.uncertainty*100)}</strong> uncertainty</span></div><p>This transparent planning score combines review timing, active study, time fit, goal match, learning need, difficulty, and uncertainty. It is not a predicted learning gain.</p>${alternatives?`<div class="rec-alternatives"><small>Other eligible topics</small>${alternatives}</div>`:''}</details>`:'';
+  const randomized=state.experimentAssignment.policy==='randomized-eligible';
+  $('#policy-note').innerHTML=randomized?'<strong>Eligible-topic comparison</strong><span>This browser was assigned a random choice among prerequisite-ready topics. You can choose another topic.</span>':'<strong>Baseline planner</strong><span>This browser was assigned the transparent priority policy. You can choose another topic.</span>';
+  const alternatives=!rec.override&&rec.ranked.filter(item=>item.topic.id!==t.id).slice(0,3).map(item=>`<button type="button" data-alternative="${item.topic.id}"><span>${escapeHtml(item.topic.title)}</span><strong>${randomized?'eligible':item.priority}</strong></button>`).join('');
+  const evidence=!rec.override?`<details class="rec-explanation"><summary>${randomized?'How this topic was selected':'Why this ranks first'}</summary><div class="score-summary"><span><strong>${randomized?`${Math.round(rec.selectionProbability*100)}%`:rec.priority}</strong>${randomized?' selection chance':' priority'}</span><span><strong>${Math.round(rec.mastery.estimate*100)}%</strong> estimated mastery</span><span><strong>${Math.round(rec.mastery.uncertainty*100)}%</strong> uncertainty</span></div><p>${randomized?`One of ${rec.ranked.length} prerequisite-ready topics was selected with equal probability. The baseline score is recorded for comparison but did not choose this topic.`:'This transparent planning score combines review timing, active study, time fit, goal match, learning need, difficulty, and uncertainty. It is not a predicted learning gain.'}</p>${alternatives?`<div class="rec-alternatives"><small>Other eligible topics</small>${alternatives}</div>`:''}</details>`:'';
   $('#recommendation').innerHTML=`<div class="rec-top"><span class="rec-label">${rec.override?'YOUR CHOICE':'RECOMMENDED NEXT'}</span><span class="rec-number">${escapeHtml(t.unit)}${rec.override?'':` · priority ${rec.priority}`}</span></div><h3>${escapeHtml(t.title)}</h3><p>${escapeHtml(note)}</p><div class="rec-meta"><span>◷ ${t.minutes} min</span>${reasons.map(reason=>`<span>✓ ${escapeHtml(reason)}</span>`).join('')}${last?`<span>Latest check ${last.correct}/${last.total}</span>`:''}</div><div class="rec-actions"><button class="primary-button" type="button" data-open="${t.id}">Explore topic ↗</button>${formsByTopic[t.id]?`<button class="quiet-button" type="button" id="recommended-study">${session?'View study cycle':'Start study cycle'}</button>`:''}${rec.override?'<button class="quiet-button" type="button" id="clear-override">Back to suggestion</button>':'<a class="quiet-button" href="#curriculum">Choose another topic</a>'}</div>${evidence}`;
   $('#recommendation [data-open]').addEventListener('click',()=>openTopic(t.id));
   $('#recommended-study')?.addEventListener('click',()=>startOrResumeStudy(t.id));
-  $('#clear-override')?.addEventListener('click',()=>{state.override=null;save();render();});
+  $('#clear-override')?.addEventListener('click',()=>{logEvent('override_cleared',{topicId:t.id});state.override=null;save();render();});
   $('#recommendation').querySelectorAll('[data-alternative]').forEach(button=>button.addEventListener('click',()=>openTopic(button.dataset.alternative)));
 }
 function renderPath(){
@@ -131,8 +142,8 @@ function openTopic(id){
   $('.dialog-close').addEventListener('click',()=>dialog.close());
   $('#start-check')?.addEventListener('click',()=>{dialog.close();openQuiz(id);});
   $('#start-study')?.addEventListener('click',()=>{dialog.close();startOrResumeStudy(id);});
-  $('#dialog-content').querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',()=>{state.status[id]=button.dataset.status;if(state.status[id]==='confident'&&state.override===id)state.override=null;save();dialog.close();render();openTopic(id);}));
-  $('#choose-topic').addEventListener('click',()=>{state.override=id;save();dialog.close();render();location.hash='dashboard';});
+  $('#dialog-content').querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',()=>{const previous=state.status[id]||'new';state.status[id]=button.dataset.status;logEvent('topic_status_changed',{topicId:id,previous,status:button.dataset.status});if(state.status[id]==='confident'&&state.override===id)state.override=null;save();dialog.close();render();openTopic(id);}));
+  $('#choose-topic').addEventListener('click',()=>{state.override=id;logEvent('topic_override_selected',{topicId:id,assignedPolicy:state.experimentAssignment.policy});save();dialog.close();render();location.hash='dashboard';});
 }
 
 function startOrResumeStudy(topicId){
@@ -142,7 +153,8 @@ function startOrResumeStudy(topicId){
     session={...createStudySession(topicId,topicById[topicId].minutes),priorItemExposure:state.attempts.some(attempt=>attempt.topicId===topicId&&(!attempt.assessmentType||attempt.assessmentType==='diagnostic'))};
     state.studySessions.push(session);
     const record=[...state.recommendations].reverse().find(item=>item.topicId===topicId&&!item.acceptedAt);
-    if(record)record.acceptedAt=new Date().toISOString();
+    if(record){record.acceptedAt=new Date().toISOString();logEvent('recommendation_accepted',{recommendationId:record.id,policy:record.policy,topicId});}
+    logEvent('study_cycle_started',{studySessionId:session.id,topicId});
     save();render();
   }
   showStudySession(session.id);
@@ -216,6 +228,7 @@ async function finishQuiz(){
   }
   const attempt={id:crypto.randomUUID(),topicId:quiz.topicId,sessionId:quiz.sessionId,assessmentType:quiz.assessmentType,bankVersion:quiz.bankVersion,startedAt:quiz.startedAt,completedAt:new Date().toISOString(),responses:quiz.responses,correct:result.correct,total:result.total,scoringSource:source};
   state.attempts.push(attempt);
+  logEvent('knowledge_assessment_completed',{attemptId:attempt.id,topicId:attempt.topicId,assessmentType:attempt.assessmentType,correct:attempt.correct,total:attempt.total});
   state.attempts=state.attempts.slice(-200);
   if(quiz.sessionId){
     const session=state.studySessions.find(item=>item.id===quiz.sessionId);
@@ -231,11 +244,13 @@ async function finishQuiz(){
   $('#finish-check').addEventListener('click',()=>{$('#quiz-dialog').close();quiz.sessionId?showStudySession(quiz.sessionId):openTopic(quiz.topicId);});
 }
 
+if(newAssignment)logEvent('experiment_assigned',{assignmentId:state.experimentAssignment.id,experimentVersion:state.experimentAssignment.experimentVersion,policy:state.experimentAssignment.policy,assignmentProbability:state.experimentAssignment.assignmentProbability});
+logEvent('app_opened',{experimentVersion:state.experimentAssignment.experimentVersion,policy:state.experimentAssignment.policy});save();
 $('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);
-$('#goal-select').addEventListener('change',event=>{state.goal=event.target.value;state.override=null;save();render();});
-$('#time-select').addEventListener('change',event=>{state.minutes=Number(event.target.value);state.override=null;save();render();});
+$('#goal-select').addEventListener('change',event=>{const previous=state.goal;state.goal=event.target.value;state.override=null;logEvent('goal_changed',{previous,goal:state.goal});save();render();});
+$('#time-select').addEventListener('change',event=>{const previous=state.minutes;state.minutes=Number(event.target.value);state.override=null;logEvent('available_time_changed',{previous,minutes:state.minutes});save();render();});
 document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;document.querySelectorAll('.filter').forEach(item=>item.classList.toggle('active',item===button));renderTopics();}));
-$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, study sessions, recommendation history, and cognitive assessments in this browser and your account?':'Reset your local topic status, quiz attempts, study sessions, recommendation history, and cognitive assessments?')){state=structuredClone(defaultState);save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
+$('#reset-button').addEventListener('click',()=>{const synced=accountController?.isSyncEnabled();if(confirm(synced?'Reset topic status, quiz attempts, study sessions, recommendation history, and cognitive assessments in this browser and your account? Experiment assignment and event history remain until account deletion.':'Reset your local learning progress? Experiment assignment and event history remain on this device.')){const assignment=state.experimentAssignment,events=state.researchEvents;state={...structuredClone(defaultState),experimentAssignment:assignment,researchEvents:events};logEvent('learning_progress_reset',{});save();$('#goal-select').value=state.goal;$('#time-select').value=String(state.minutes);render();}});
 $('#topic-dialog').addEventListener('click',event=>{if(event.target.id==='topic-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('click',event=>{if(event.target.id==='quiz-dialog')event.target.close();});
 $('#quiz-dialog').addEventListener('close',()=>{if(studyTimer)clearInterval(studyTimer);studyTimer=null;});
@@ -244,13 +259,15 @@ setInterval(renderStudyPanel,60000);
 render();
 cognitiveController = await mountCognitive({
   getSessions:()=>state.cognitiveSessions,
-  addSession:session=>{state.cognitiveSessions.push(session);state.cognitiveSessions=state.cognitiveSessions.slice(-50);save();render();}
+  addSession:session=>{state.cognitiveSessions.push(session);state.cognitiveSessions=state.cognitiveSessions.slice(-50);logEvent('cognitive_assessment_completed',{cognitiveSessionId:session.id,batteryVersion:session.batteryVersion});save();render();}
 });
 if (await apiReady) {
   accountController = mountAccount({
     getState: () => state,
     setState: remote => {
-      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || [],cognitiveSessions:remote.cognitiveSessions || [],recommendations:remote.recommendations || []};
+      const needsAssignment=!validAssignment(remote.experimentAssignment);
+      state = {...defaultState,...remote,status:remote.status || {},attempts:remote.attempts || [],studySessions:remote.studySessions || [],cognitiveSessions:remote.cognitiveSessions || [],recommendations:remote.recommendations || [],researchEvents:(remote.researchEvents || []).slice(-1000),experimentAssignment:needsAssignment?createAssignment():remote.experimentAssignment};
+      if(needsAssignment)logEvent('experiment_assigned',{assignmentId:state.experimentAssignment.id,experimentVersion:state.experimentAssignment.experimentVersion,policy:state.experimentAssignment.policy,assignmentProbability:state.experimentAssignment.assignmentProbability});
       $('#goal-select').value=state.goal;
       $('#time-select').value=String(state.minutes);
       save();render();

@@ -1,6 +1,6 @@
 # Next Step — adaptive learning prototype
 
-This repository is a six-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned baseline recommendation policy, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, and an optional account in the local .NET app.
+This repository is a seven-step web application prototype for introductory JavaScript. It has a 20-topic prerequisite graph, a versioned feasibility experiment, six study cycles with alternate pre, immediate, and delayed checks, an optional cognitive task battery, and an optional account in the local .NET app.
 
 ## Run the app
 
@@ -38,12 +38,18 @@ The deterministic `baseline-1.0` policy first removes topics whose prerequisites
 
 The priority is a transparent planning score, not a predicted learning gain. Cognitive assessment results are intentionally excluded so later experiments can compare cognitive models with a meaningful educational baseline. The browser saves versioned recommendation records with the chosen topic, candidate count, factor breakdown, selection probability, and whether the learner started it. The local .NET account stores and exports those records in a separate `Recommendations` table.
 
-The consent notice is version `2026-10-11-v3`; existing accounts must accept it before saving Step 6 recommendation history to the server.
+## Step 7: feasibility experiment
+
+Each browser receives one stable 50/50 assignment to `baseline` or `randomized-eligible` under experiment version `feasibility-1.0`. The baseline policy selects its highest priority eligible topic. The comparison policy uses a deterministic draw among prerequisite-ready topics, records a `1 / candidate count` selection probability, and stays stable for the same assignment and learning context. The interface identifies the assigned policy and preserves the learner's ability to choose another topic.
+
+Versioned research events record assignment, recommendation exposure and acceptance, study starts, completed assessments, learner setting changes, and resets. Account storage enforces one immutable assignment and append-only event IDs. Cognitive results remain excluded from topic selection until a separately specified and validated policy is ready.
+
+The consent notice is version `2026-10-11-v4`; existing accounts must accept it before saving the pilot assignment and interaction events to the server.
 
 ## Current limits
 
 - The hosted preview still keeps all progress in that browser. Accounts and PostgreSQL require running/deploying the .NET API separately.
-- Browser progress is copied as a snapshot; using two browsers at once can replace later changes with an older copy. Choose which copy to load or upload when switching devices.
+- Learning progress is copied as a snapshot. Assignment and event history are preserved by the API, but concurrent use in multiple browsers is not yet supported; load the account copy before switching devices.
 - Historical browser timestamps and response times are client supplied. Knowledge and cognitive correctness are recalculated, but timing is not independently verified.
 - The short question forms and cognitive tasks are not calibrated. Pre/post differences are not validated learning gains; the short battery is not a reliable diagnostic measure of a stable cognitive trait.
 - Topic mastery and uncertainty are preliminary estimates from short, uncalibrated forms plus a weak status prior. Use them for planning and pilot evaluation only.
@@ -51,4 +57,4 @@ The consent notice is version `2026-10-11-v3`; existing accounts must accept it 
 
 ## Next step
 
-Add experiment assignment and immutable event logging for baseline, randomized eligible, and future cognitive policies. Then run a small feasibility pilot to inspect completion time, missing data, device effects, practice effects, and reliability before testing whether cognitive measures add useful predictive value.
+Run a small feasibility pilot to inspect completion time, missing data, override rates, device effects, practice effects, and reliability. Define exclusion rules and an analysis plan before testing whether cognitive measures add useful predictive value.

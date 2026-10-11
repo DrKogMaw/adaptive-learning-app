@@ -18,7 +18,7 @@
         <a href="#curriculum" class="nav-link"><span aria-hidden="true">⌘</span> Curriculum</a>
         <a href="#how-it-works" class="nav-link"><span aria-hidden="true">◈</span> How it works</a>
       </nav>
-      <div class="sidebar-note"><span class="status-dot"></span> Prototype · <span id="milestone-label">Milestone 6</span><br><small id="storage-label">Your progress stays in this browser.</small></div>
+      <div class="sidebar-note"><span class="status-dot"></span> Prototype · <span id="milestone-label">Milestone 7</span><br><small id="storage-label">Your progress stays in this browser.</small></div>
     </aside>
 
     <main id="dashboard" class="main-content">
@@ -38,7 +38,8 @@
 
         <section class="workspace-grid" aria-label="Study planner">
           <div class="planner-card">
-            <div class="section-heading"><div><p class="eyebrow">YOUR STUDY PLAN</p><h2>A good place to begin</h2></div><span class="beta-pill">BASELINE 1.0</span></div>
+            <div class="section-heading"><div><p class="eyebrow">YOUR STUDY PLAN</p><h2>A good place to begin</h2></div><span class="beta-pill">PILOT 1.0</span></div>
+            <div id="policy-note" class="policy-note" aria-live="polite"></div>
             <div class="controls"><label>Learning goal<select id="goal-select"><option value="all">Build a strong foundation</option><option value="web">Build for the web</option><option value="problem">Solve coding problems</option></select></label><label>Time available<select id="time-select"><option value="15">15 minutes</option><option value="25" selected>25 minutes</option><option value="45">45 minutes</option></select></label></div>
             <div id="recommendation" class="recommendation" aria-live="polite"></div>
           </div>
@@ -49,7 +50,7 @@
 
         <section id="curriculum" class="curriculum-section"><div class="section-heading"><div><p class="eyebrow">CURRICULUM MAP</p><h2>Programming, step by step</h2><p class="muted">Choose a topic to see its objective and activity. Mark your current comfort level to shape the plan.</p></div><div class="filter-row" role="group" aria-label="Filter topics"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="ready" type="button">Ready</button><button class="filter" data-filter="locked" type="button">Later</button></div></div><div id="topic-grid" class="topic-grid"></div></section>
 
-        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Prerequisites first</h3><p>Only topics with confident prerequisites enter the ranked shortlist.</p></div><div><span class="method-number">02</span><h3>Evidence sets priority</h3><p>The baseline weighs due reviews, active cycles, mastery evidence, uncertainty, your goal, difficulty, and available time.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Open the score explanation, compare eligible alternatives, or choose any topic yourself. Cognitive results remain separate.</p></div></div><p class="research-note">Research note: priority is a transparent planning score, not a predicted learning gain. The questions and cognitive tasks are not calibrated, and this version does not diagnose cognitive traits.</p></section>
+        <section id="how-it-works" class="method-section"><div><p class="eyebrow">HOW THIS VERSION WORKS</p><h2>Clear reasons, better decisions.</h2></div><div class="method-grid"><div><span class="method-number">01</span><h3>Safe eligible set</h3><p>Only topics with confident prerequisites enter either recommendation policy.</p></div><div><span class="method-number">02</span><h3>Known assignment</h3><p>This browser keeps one 50/50 pilot assignment: transparent baseline or equal-probability eligible selection.</p></div><div><span class="method-number">03</span><h3>You stay in control</h3><p>Every suggestion can be overridden. Cognitive results remain separate from topic selection.</p></div></div><p class="research-note">Research note: this feasibility assignment tests data collection and policy behavior. It does not establish educational benefit, predict learning gain, or diagnose cognitive traits.</p></section>
         <footer><span>Next Step · Research prototype</span><button id="reset-button" type="button">Reset my local progress</button></footer>
       </div>
     </main>

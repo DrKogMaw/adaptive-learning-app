@@ -130,6 +130,27 @@ public sealed class RecommendationRow
     public DateTimeOffset? AcceptedAt { get; set; }
 }
 
+public sealed class ExperimentAssignmentRow
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string ExperimentVersion { get; set; } = "";
+    public string Policy { get; set; } = "";
+    public double AssignmentProbability { get; set; }
+    public DateTimeOffset AssignedAt { get; set; }
+}
+
+public sealed class ResearchEventRow
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string SchemaVersion { get; set; } = "";
+    public string Type { get; set; } = "";
+    public DateTimeOffset OccurredAt { get; set; }
+    public Guid SessionId { get; set; }
+    public string PayloadJson { get; set; } = "{}";
+}
+
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<ConsentRecord> Consents => Set<ConsentRecord>();
@@ -141,6 +162,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     public DbSet<CognitiveTrialRow> CognitiveTrials => Set<CognitiveTrialRow>();
     public DbSet<StateQuestionnaireRow> StateQuestionnaires => Set<StateQuestionnaireRow>();
     public DbSet<RecommendationRow> Recommendations => Set<RecommendationRow>();
+    public DbSet<ExperimentAssignmentRow> ExperimentAssignments => Set<ExperimentAssignmentRow>();
+    public DbSet<ResearchEventRow> ResearchEvents => Set<ResearchEventRow>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -170,5 +193,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
         model.Entity<RecommendationRow>().Property(x => x.ModelVersion).HasMaxLength(40);
         model.Entity<RecommendationRow>().Property(x => x.TopicId).HasMaxLength(100);
         model.Entity<RecommendationRow>().Property(x => x.Goal).HasMaxLength(20);
+        model.Entity<ExperimentAssignmentRow>().HasIndex(x => x.UserId).IsUnique();
+        model.Entity<ExperimentAssignmentRow>().Property(x => x.ExperimentVersion).HasMaxLength(40);
+        model.Entity<ExperimentAssignmentRow>().Property(x => x.Policy).HasMaxLength(40);
+        model.Entity<ResearchEventRow>().HasIndex(x => new { x.UserId, x.OccurredAt });
+        model.Entity<ResearchEventRow>().Property(x => x.SchemaVersion).HasMaxLength(20);
+        model.Entity<ResearchEventRow>().Property(x => x.Type).HasMaxLength(60);
     }
 }

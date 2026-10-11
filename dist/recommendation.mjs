@@ -1,4 +1,5 @@
 export const BASELINE_POLICY_VERSION = 'baseline-1.0';
+export const RANDOM_POLICY_VERSION = 'randomized-eligible-1.0';
 
 const evidenceWeight = {diagnostic:1,pre:1,post:1.25,delayed:1.75};
 const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
@@ -62,10 +63,21 @@ export function recommendBaseline(input) {
   return ranked.length?{...ranked[0],ranked,policyVersion:BASELINE_POLICY_VERSION}:null;
 }
 
+function hash(value){let result=2166136261;for(const char of value){result^=char.charCodeAt(0);result=Math.imul(result,16777619);}return result>>>0;}
+
+export function recommendRandomEligible(input,assignmentId) {
+  const ranked=rankBaseline(input);
+  if(!ranked.length)return null;
+  const context=[assignmentId,input.goal,input.minutes,...ranked.map(item=>`${item.topic.id}:${item.reviewDue}:${item.active}`)].join('|');
+  const selected=ranked[hash(context)%ranked.length];
+  return {...selected,ranked,policy:'randomized-eligible',policyVersion:RANDOM_POLICY_VERSION,selectionProbability:1/ranked.length,
+    reasons:['Selected from prerequisite-ready topics',`${ranked.length} eligible option${ranked.length===1?'':'s'}`]};
+}
+
 export function recommendationRecord(rec,{goal,minutes},createdAt=new Date()) {
   return {
-    id:crypto.randomUUID(),createdAt:createdAt.toISOString(),policy:'baseline',modelVersion:rec.policyVersion,
-    topicId:rec.topic.id,priority:rec.priority,selectionProbability:1,candidateCount:rec.ranked.length,
+    id:crypto.randomUUID(),createdAt:createdAt.toISOString(),policy:rec.policy||'baseline',modelVersion:rec.policyVersion,
+    topicId:rec.topic.id,priority:rec.priority,selectionProbability:rec.selectionProbability??1,candidateCount:rec.ranked.length,
     goal,minutes,reasons:rec.reasons,factors:rec.components,masteryEstimate:rec.mastery.estimate,
     masteryUncertainty:rec.mastery.uncertainty,acceptedAt:null
   };
